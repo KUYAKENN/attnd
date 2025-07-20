@@ -1,0 +1,174 @@
+<div class="attendance-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <h2>Attendance Management</h2>
+    
+    <!-- Message Display -->
+    <div *ngIf="message" 
+         class="message" 
+         [ngClass]="{'success': messageType === 'success', 'error': messageType === 'error', 'info': messageType === 'info'}">
+      {{ message }}
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-section">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.totalEmployees }}</div>
+        <div class="stat-label">Total Employees</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.presentToday }}</div>
+        <div class="stat-label">Present Today</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">⏰</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.lateArrivals }}</div>
+        <div class="stat-label">Late Arrivals</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">🚪</div>
+      <div class="stat-content">
+        <div class="stat-number">{{ stats.earlyDepartures }}</div>
+        <div class="stat-label">Early Departures</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Control Panel -->
+  <div class="control-panel">
+    <div class="panel-section">
+      <h3>Face Recognition</h3>
+      <div class="recognition-controls">
+        <div class="recognition-status">
+          <span class="status-indicator" 
+                [ngClass]="{'active': isRecognitionActive, 'inactive': !isRecognitionActive}">
+          </span>
+          <span class="status-text">
+            {{ isRecognitionActive ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+        
+        <button 
+          class="btn toggle-btn"
+          [ngClass]="{'btn-stop': isRecognitionActive, 'btn-start': !isRecognitionActive}"
+          (click)="toggleFaceRecognition()"
+          [disabled]="isProcessing">
+          <span *ngIf="isProcessing">Processing...</span>
+          <span *ngIf="!isProcessing">
+            {{ isRecognitionActive ? 'Stop Recognition' : 'Start Recognition' }}
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Manual Attendance</h3>
+      <div class="manual-controls">
+        <div class="form-group">
+          <label for="employeeSelect">Select Employee</label>
+          <select 
+            id="employeeSelect"
+            [(ngModel)]="selectedPersonId" 
+            class="form-control">
+            <option [ngValue]="null">Choose an employee...</option>
+            <option *ngFor="let person of persons" [ngValue]="person.id">
+              {{ person.name }} - {{ person.department }}
+            </option>
+          </select>
+        </div>
+
+        <div class="manual-buttons">
+          <button 
+            class="btn btn-check-in"
+            (click)="manualCheckIn()"
+            [disabled]="!selectedPersonId || isProcessing">
+            Check In
+          </button>
+          
+          <button 
+            class="btn btn-check-out"
+            (click)="manualCheckOut()"
+            [disabled]="!selectedPersonId || isProcessing">
+            Check Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance Table -->
+  <div class="attendance-table-section">
+    <div class="table-header">
+      <h3>Attendance Records</h3>
+      <div class="date-filter">
+        <label for="dateSelect">Select Date:</label>
+        <input 
+          type="date" 
+          id="dateSelect"
+          [(ngModel)]="selectedDate"
+          (change)="onDateChange()"
+          class="form-control">
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="attendance-table">
+        <thead>
+          <tr>
+            <th>Employee Name</th>
+            <th>Department</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Status</th>
+            <th>Confidence</th>
+            <th>Method</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let attendance of todayAttendance" 
+              [ngClass]="getAttendanceStatusClass(attendance.status)">
+            <td class="name-cell">{{ attendance.person_name }}</td>
+            <td>{{ getPersonName(attendance.person_id) | slice:0:1 }}{{ getPersonName(attendance.person_id) | slice:1 }}</td>
+            <td class="time-cell">
+              {{ attendance.check_in_time ? formatTime(attendance.check_in_time) : '-' }}
+            </td>
+            <td class="time-cell">
+              {{ attendance.check_out_time ? formatTime(attendance.check_out_time) : '-' }}
+            </td>
+            <td>
+              <span class="status-badge" [ngClass]="getAttendanceStatusClass(attendance.status)">
+                {{ attendance.status | titlecase }}
+              </span>
+            </td>
+            <td class="confidence-cell">
+              {{ (attendance.confidence_score * 100).toFixed(1) }}%
+            </td>
+            <td>
+              <span class="method-badge" [ngClass]="'method-' + attendance.detection_method">
+                {{ attendance.detection_method | titlecase }}
+              </span>
+            </td>
+          </tr>
+          
+          <tr *ngIf="todayAttendance.length === 0">
+            <td colspan="7" class="no-data">
+              No attendance records found for {{ selectedDate }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

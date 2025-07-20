@@ -1,0 +1,61 @@
+<nav class="navbar">
+  <div class="nav-container">
+    <!-- Logo/Brand -->
+    <div class="nav-brand">
+      <a routerLink="/" class="brand-link">
+        <span class="brand-icon">👤</span>
+        <span class="brand-text">AttendanceSystem</span>
+      </a>
+    </div>
+
+    <!-- Desktop Navigation -->
+    <div class="nav-menu" [ngClass]="{'active': isMenuOpen}">
+      <a routerLink="/dashboard" 
+         routerLinkActive="active" 
+         class="nav-link"
+         (click)="closeMenu()">
+        <span class="nav-icon">🏠</span>
+        Dashboard
+      </a>
+      
+      <a routerLink="/live-attendance" 
+         routerLinkActive="active" 
+         class="nav-link live-link"
+         (click)="closeMenu()">
+        <span class="nav-icon">🎥</span>
+        Live Scan
+      </a>
+      
+      <a routerLink="/attendance" 
+         routerLinkActive="active" 
+         class="nav-link"
+         (click)="closeMenu()">
+        <span class="nav-icon">📊</span>
+        Attendance
+      </a>
+      
+      <a routerLink="/registration" 
+         routerLinkActive="active" 
+         class="nav-link"
+         (click)="closeMenu()">
+        <span class="nav-icon">➕</span>
+        Register
+      </a>
+      
+      <a routerLink="/employees" 
+         routerLinkActive="active" 
+         class="nav-link"
+         (click)="closeMenu()">
+        <span class="nav-icon">👥</span>
+        Employees
+      </a>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <div class="nav-toggle" (click)="toggleMenu()">
+      <span class="toggle-line" [ngClass]="{'active': isMenuOpen}"></span>
+      <span class="toggle-line" [ngClass]="{'active': isMenuOpen}"></span>
+      <span class="toggle-line" [ngClass]="{'active': isMenuOpen}"></span>
+    </div>
+  </div>
+</nav>

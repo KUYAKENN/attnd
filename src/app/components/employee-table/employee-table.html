@@ -1,0 +1,89 @@
+<div class="employee-table-container">
+  <div class="header">
+    <h2>Employee Management</h2>
+    <div class="actions">
+      <button class="btn btn-primary" (click)="loadPersons()">Refresh</button>
+      <button class="btn btn-success" (click)="exportToCSV()">Export CSV</button>
+    </div>
+  </div>
+
+  <div *ngIf="message" [class]="'message ' + messageType">
+    {{ message }}
+  </div>
+
+  <div class="filters">
+    <div class="filter-group">
+      <label for="search">Search</label>
+      <input id="search" type="text" [(ngModel)]="searchTerm" (ngModelChange)="onFiltersChange()" placeholder="Search by name or email..."/>
+    </div>
+
+    <div class="filter-group">
+      <label for="department">Department</label>
+      <select id="department" [(ngModel)]="selectedDepartment" (ngModelChange)="onFiltersChange()">
+        <option value="">All Departments</option>
+        <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="status">Status</label>
+      <select id="status" [(ngModel)]="selectedStatus" (ngModelChange)="onFiltersChange()">
+        <option value="">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">Loading employees...</div>
+
+  <div *ngIf="!isLoading" class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th (click)="sort('name')" [class]="'sortable ' + (sortBy === 'name' ? 'sort-' + sortDirection : '')">Name</th>
+          <th>Email</th>
+          <th>Department</th>
+          <th>Status</th>
+          <th>Registered</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let person of paginatedPersons">
+          <td>{{ person.name }}</td>
+          <td>{{ person.email || 'N/A' }}</td>
+          <td>{{ person.department || 'N/A' }}</td>
+          <td>
+            <span class="status-badge" [class]="getStatusClass(person.status)">
+              {{ person.status }}
+            </span>
+          </td>
+          <td>{{ formatDateTime(person.registration_date) }}</td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn btn-primary btn-sm" (click)="editPerson(person)">Edit</button>
+              <button class="btn btn-sm" [class]="person.status === 'active' ? 'btn-secondary' : 'btn-success'" (click)="togglePersonStatus(person)">
+                {{ person.status === 'active' ? 'Deactivate' : 'Activate' }}
+              </button>
+              <button class="btn btn-danger btn-sm" (click)="deletePerson(person)">Delete</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div *ngIf="!isLoading && filteredPersons.length === 0" class="empty-state">
+    <h3>No employees found</h3>
+    <p>Try adjusting your search criteria or add new employees.</p>
+  </div>
+
+  <div *ngIf="!isLoading && filteredPersons.length > 0" class="pagination">
+    <button (click)="goToPage(1)" [disabled]="currentPage === 1">First</button>
+    <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">Previous</button>
+    <span>Page {{ currentPage }} of {{ totalPages }}</span>
+    <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">Next</button>
+    <button (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages">Last</button>
+  </div>
+</div>

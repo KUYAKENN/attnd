@@ -1,0 +1,149 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <h1>Face Recognition Attendance System</h1>
+    <p class="dashboard-subtitle">
+      Powered by ArcFace Technology | {{ currentDate | date:'fullDate' }}
+    </p>
+  </div>
+
+  <!-- Navigation Cards -->
+  <div class="nav-cards">
+    <div class="nav-card" routerLink="/attendance">
+      <div class="card-icon">📊</div>
+      <div class="card-content">
+        <h3>Attendance Tracking</h3>
+        <p>Monitor real-time attendance, manual check-in/out, and view daily records</p>
+      </div>
+      <div class="card-arrow">→</div>
+    </div>
+
+    <div class="nav-card" routerLink="/registration">
+      <div class="card-icon">👤</div>
+      <div class="card-content">
+        <h3>Employee Registration</h3>
+        <p>Register new employees and capture their face data for recognition</p>
+      </div>
+      <div class="card-arrow">→</div>
+    </div>
+
+    <div class="nav-card" routerLink="/employees">
+      <div class="card-icon">👥</div>
+      <div class="card-content">
+        <h3>Employee Management</h3>
+        <p>View, edit, and manage all registered employees</p>
+      </div>
+      <div class="card-arrow">→</div>
+    </div>
+
+    <div class="nav-card" routerLink="/reports">
+      <div class="card-icon">📈</div>
+      <div class="card-content">
+        <h3>Reports & Export</h3>
+        <p>Generate attendance reports and export data to CSV</p>
+      </div>
+      <div class="card-arrow">→</div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="quick-stats">
+    <h2>Quick Overview</h2>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-icon">👨‍💼</div>
+        <div class="stat-info">
+          <span class="stat-number">--</span>
+          <span class="stat-label">Total Employees</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <div class="stat-icon">✅</div>
+        <div class="stat-info">
+          <span class="stat-number">--</span>
+          <span class="stat-label">Present Today</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <div class="stat-icon">⏰</div>
+        <div class="stat-info">
+          <span class="stat-number">--</span>
+          <span class="stat-label">Late Arrivals</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-info">
+          <span class="stat-number">--%</span>
+          <span class="stat-label">Attendance Rate</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features Section -->
+  <div class="features-section">
+    <h2>System Features</h2>
+    <div class="features-grid">
+      <div class="feature-item">
+        <div class="feature-icon">🔍</div>
+        <h4>ArcFace Recognition</h4>
+        <p>Advanced face recognition technology for accurate identification</p>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">⚡</div>
+        <h4>Real-time Processing</h4>
+        <p>Instant attendance marking with real-time face detection</p>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">📱</div>
+        <h4>Manual Override</h4>
+        <p>Manual check-in/out options for special circumstances</p>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">📊</div>
+        <h4>Detailed Reports</h4>
+        <p>Comprehensive attendance reports and analytics</p>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">💾</div>
+        <h4>Data Export</h4>
+        <p>Export attendance data to CSV for external analysis</p>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">🔒</div>
+        <h4>Secure Storage</h4>
+        <p>Encrypted face data storage with privacy protection</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <h2>Quick Actions</h2>
+    <div class="actions-grid">
+      <button class="action-btn primary" routerLink="/registration">
+        <span class="btn-icon">➕</span>
+        Add New Employee
+      </button>
+
+      <button class="action-btn secondary" routerLink="/attendance">
+        <span class="btn-icon">📊</span>
+        View Today's Attendance
+      </button>
+
+      <button class="action-btn tertiary" routerLink="/employees">
+        <span class="btn-icon">📋</span>
+        Export Attendance Report
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,255 @@
+<div class="live-attendance-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <h2>🎥 Live Face Recognition Attendance</h2>
+    <div class="status-indicators">
+      <div class="status-item">
+        <span class="status-label">Camera:</span>
+        <span [class]="'status-badge ' + getStatusClass()">
+          {{ cameraStatus | titlecase }}
+        </span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Scanning:</span>
+        <span [class]="'status-badge ' + (isScanning ? 'status-active' : 'status-stopped')">
+          {{ isScanning ? 'Active' : 'Stopped' }}
+        </span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Mode:</span>
+        <button [class]="'mode-badge ' + getModeColorClass()" 
+                (click)="requestModeChange()"
+                title="Click to change mode (password required)">
+          {{ getModeDisplayText() }} 🔒
+        </button>
+      </div>
+      <div class="status-item" *ngIf="lastRecognitionTime">
+        <span class="status-label">Last Scan:</span>
+        <span class="time-badge">{{ getTimeSinceLastRecognition() }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="content-grid">
+    <!-- Camera Section -->
+    <div class="camera-section">
+      <div class="camera-container">
+        <video #videoElement 
+               class="video-stream" 
+               autoplay 
+               muted 
+               playsinline>
+        </video>
+        
+        <!-- Camera Overlay -->
+        <div class="camera-overlay" *ngIf="cameraStatus !== 'active'">
+          <div class="overlay-content">
+            <i class="camera-icon">📹</i>
+            <p>Camera {{ cameraStatus === 'error' ? 'Error' : 'Stopped' }}</p>
+          </div>
+        </div>
+
+        <!-- Face Detection Indicator -->
+        <div class="detection-indicator" 
+             *ngIf="isScanning && cameraStatus === 'active'"
+             [class.scanning]="isScanning">
+          <div class="scan-frame"></div>
+        </div>
+      </div>
+
+      <!-- Camera Controls -->
+      <div class="camera-controls">
+        <button class="btn btn-primary" 
+                *ngIf="cameraStatus !== 'active'"
+                (click)="startCamera()">
+          <i>📹</i> Start Camera
+        </button>
+        
+        <ng-container *ngIf="cameraStatus === 'active'">
+          <button class="btn btn-success" 
+                  *ngIf="!isScanning"
+                  (click)="startScanning()">
+            <i>🔍</i> Start Scanning
+          </button>
+          
+          <button class="btn btn-warning" 
+                  *ngIf="isScanning"
+                  (click)="stopScanning()">
+            <i>⏸️</i> Stop Scanning
+          </button>
+          
+          <button class="btn btn-secondary" 
+                  (click)="manualCapture()">
+            <i>📸</i> Manual Capture
+          </button>
+          
+          <button class="btn btn-danger" 
+                  (click)="stopCamera()">
+            <i>⏹️</i> Stop Camera
+          </button>
+        </ng-container>
+      </div>
+    </div>
+
+    <!-- Recognition Results Section -->
+    <div class="results-section">
+      <div class="recognition-result" *ngIf="currentResult">
+        <div [class]="'result-card ' + getResultClass()">
+          <div class="result-header">
+            <i *ngIf="currentResult.recognized">✅</i>
+            <i *ngIf="!currentResult.recognized">❌</i>
+            <h3>{{ currentResult.recognized ? 'Recognition Success' : 'Recognition Failed' }}</h3>
+          </div>
+          
+          <div class="result-content">
+            <div *ngIf="currentResult.recognized" class="success-content">
+              <p class="person-name">{{ currentResult.person_name }}</p>
+              <p class="confidence">Confidence: {{ (currentResult.similarity! * 100).toFixed(1) }}%</p>
+              <p class="attendance-id" *ngIf="currentResult.attendance_id">
+                Attendance ID: #{{ currentResult.attendance_id }}
+              </p>
+            </div>
+            
+            <div *ngIf="!currentResult.recognized" class="error-content">
+              <p class="error-message">{{ currentResult.message }}</p>
+              <p class="help-text">
+                Person not registered or face not clear enough. 
+                Please ensure good lighting and face the camera directly.
+              </p>
+            </div>
+            
+            <p class="message">{{ currentResult.message }}</p>
+            <p class="timestamp" *ngIf="currentResult.timestamp">
+              {{ formatTime(currentResult.timestamp) }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instructions -->
+      <div class="instructions-card" *ngIf="!currentResult || !isScanning">
+        <h4>📋 Instructions</h4>
+        <ul>
+          <li>Click "Start Camera" to begin</li>
+          <li>Position your face clearly in front of the camera</li>
+          <li>Ensure good lighting conditions</li>
+          <li>Click "Start Scanning" for automatic recognition</li>
+          <li>System will automatically record attendance when face is recognized</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Attendance Section -->
+  <div class="attendance-section">
+    <div class="section-header">
+      <h3>📅 Today's Attendance</h3>
+      <button class="btn btn-outline" (click)="loadTodayAttendance()">
+        <i>🔄</i> Refresh
+      </button>
+    </div>
+    
+    <div class="attendance-list" *ngIf="recentAttendance.length > 0; else noAttendance">
+      <div class="attendance-item" *ngFor="let record of recentAttendance">
+        <div class="person-info">
+          <span class="person-name">{{ record.person_name }}</span>
+          <span class="person-dept">{{ record.department }}</span>
+          <span [class]="'status-badge status-' + record.status">{{ record.status }}</span>
+        </div>
+        <div class="time-info">
+          <span class="check-in">In: {{ formatTime(record.check_in_time) }}</span>
+          <span class="check-out" *ngIf="record.check_out_time">
+            Out: {{ formatTime(record.check_out_time) }}
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <ng-template #noAttendance>
+      <div class="no-data">
+        <p>No attendance records for today yet.</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Present Employees Section -->
+  <div class="present-section">
+    <div class="section-header">
+      <h3>👥 Currently Present ({{ presentCount }})</h3>
+      <button class="btn btn-outline" (click)="loadPresentEmployees()">
+        <i>🔄</i> Refresh
+      </button>
+    </div>
+    
+    <div class="present-list" *ngIf="presentEmployees.length > 0; else noPresent">
+      <div class="present-item" *ngFor="let employee of presentEmployees">
+        <div class="employee-info">
+          <span class="employee-name">{{ employee.name }}</span>
+          <span class="employee-dept">{{ employee.department }}</span>
+          <span class="employee-position">{{ employee.position }}</span>
+        </div>
+        <div class="time-info">
+          <span class="check-in-time">In: {{ formatTime(employee.check_in_time) }}</span>
+          <span class="duration">{{ calculateDuration(employee.check_in_time) }}</span>
+        </div>
+      </div>
+    </div>
+    
+    <ng-template #noPresent>
+      <div class="no-data">
+        <p>No employees are currently present.</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Logs Section -->
+  <div class="logs-section">
+    <div class="section-header">
+      <h3>📊 Recognition Logs</h3>
+      <button class="btn btn-outline" (click)="toggleLogs()">
+        <i>{{ showLogs ? '👁️‍🗨️' : '👁️' }}</i> {{ showLogs ? 'Hide' : 'Show' }} Logs
+      </button>
+    </div>
+    
+    <div class="logs-list" *ngIf="showLogs && recognitionLogs.length > 0">
+      <div class="log-item" *ngFor="let log of recognitionLogs">
+        <div class="log-status">
+          <span [class]="'status-badge status-' + log.detection_status">
+            {{ log.detection_status }}
+          </span>
+        </div>
+        <div class="log-info">
+          <span class="log-person">{{ log.person_name || 'Unknown' }}</span>
+          <span class="log-confidence">{{ (log.confidence_score * 100).toFixed(1) }}%</span>
+          <span class="log-time">{{ formatTime(log.recognition_time) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal-overlay" *ngIf="showPasswordModal" (click)="cancelPasswordModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>🔒 Change Attendance Mode</h3>
+      <button class="close-btn" (click)="cancelPasswordModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p>Enter admin password to change from <strong>{{ getModeDisplayText() }}</strong> to 
+         <strong>{{ attendanceMode === 'check_in' ? 'Check Out' : 'Check In' }}</strong></p>
+      <div class="input-group">
+        <input type="password" 
+               [(ngModel)]="passwordInput" 
+               placeholder="Enter password"
+               class="password-input"
+               (keyup.enter)="verifyPasswordAndChangeMode()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="cancelPasswordModal()">Cancel</button>
+      <button class="btn btn-primary" (click)="verifyPasswordAndChangeMode()">Change Mode</button>
+    </div>
+  </div>
+</div>

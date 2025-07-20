@@ -1,0 +1,246 @@
+<div class="registration-container">
+  <div class="registration-card">
+    <h2>Employee Registration</h2>
+    
+    <!-- Message Display -->
+    <div *ngIf="message" class="message" [class.success]="messageType === 'success'" [class.error]="messageType === 'error'">
+      {{ message }}
+      <button type="button" class="close-btn" (click)="clearMessage()">×</button>
+    </div>
+
+    <form (ngSubmit)="submitRegistration()" #registrationForm="ngForm">
+      
+      <!-- Personal Information Section -->
+      <div class="form-section">
+        <h3>Personal Information</h3>
+        
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="name">Full Name *</label>
+            <input 
+              type="text" 
+              id="name" 
+              name="name"
+              class="form-control" 
+              [(ngModel)]="person.name" 
+              required 
+              placeholder="Enter full name">
+          </div>
+          
+          <div class="form-group half">
+            <label for="email">Email Address *</label>
+            <input 
+              type="email" 
+              id="email" 
+              name="email"
+              class="form-control" 
+              [(ngModel)]="person.email" 
+              required 
+              placeholder="Enter email address">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="phone">Phone Number</label>
+            <input 
+              type="tel" 
+              id="phone" 
+              name="phone"
+              class="form-control" 
+              [(ngModel)]="person.phone" 
+              placeholder="Enter phone number">
+          </div>
+          
+          <div class="form-group half">
+            <label for="status">Status</label>
+            <select 
+              id="status" 
+              name="status"
+              class="form-control" 
+              [(ngModel)]="person.status">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Work Information Section -->
+      <div class="form-section">
+        <h3>Work Information</h3>
+        
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="department">Department</label>
+            <select 
+              id="department" 
+              name="department"
+              class="form-control" 
+              [(ngModel)]="person.department">
+              <option value="">Select Department</option>
+              <option *ngFor="let dept of departments" [value]="dept">{{ dept }}</option>
+            </select>
+          </div>
+          
+          <div class="form-group half">
+            <label for="position">Position</label>
+            <select 
+              id="position" 
+              name="position"
+              class="form-control" 
+              [(ngModel)]="person.position">
+              <option value="">Select Position</option>
+              <option *ngFor="let pos of positions" [value]="pos">{{ pos }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea 
+            id="notes" 
+            name="notes"
+            class="form-control" 
+            [(ngModel)]="person.notes" 
+            rows="3" 
+            placeholder="Additional notes or comments"></textarea>
+        </div>
+      </div>
+
+      <!-- Face Image Section -->
+      <div class="form-section">
+        <h3>Face Recognition Setup</h3>
+        
+        <div class="image-upload-container">
+          <div *ngIf="!capturedImage" class="upload-area" (click)="fileInput.click()">
+            <div class="upload-placeholder">
+              <span class="upload-icon">📸</span>
+              <p>Click to upload face image or use camera below</p>
+              <p class="upload-hint">Supported formats: JPG, PNG (Max 5MB)</p>
+            </div>
+          </div>
+
+          <div *ngIf="capturedImage" class="image-preview">
+            <img [src]="capturedImage" alt="Face preview">
+            <div class="image-overlay">
+              <button type="button" class="change-image-btn" (click)="removeImage()">
+                Change Image
+              </button>
+            </div>
+          </div>
+
+          <input 
+            #fileInput 
+            type="file" 
+            accept="image/*" 
+            style="display: none" 
+            (change)="onFileSelected($event)">
+        </div>
+
+        <!-- Camera Controls -->
+        <div class="camera-controls">
+          <div *ngIf="!cameraActive && !capturedImage" class="camera-section">
+            <p class="camera-instructions">
+              📹 Use your camera to see yourself live and capture your face for recognition
+            </p>
+            <button type="button" class="btn btn-secondary" (click)="startCamera()">
+              📹 Start Live Camera
+            </button>
+          </div>
+
+          <div *ngIf="cameraActive" class="camera-section active">
+            <div class="camera-container">
+              <!-- Live Indicator -->
+              <div class="camera-live-indicator">
+                <div class="live-dot"></div>
+                LIVE
+              </div>
+              
+              <video 
+                #videoElement 
+                autoplay 
+                playsinline 
+                muted
+                width="640"
+                height="480"
+                style="display: block !important; visibility: visible !important; opacity: 1 !important;">
+                Your browser does not support video.
+              </video>
+              <div class="camera-overlay">
+                <!-- Face Detection Status -->
+                <div *ngIf="isDetectingFace && !faceDetected" class="detection-status scanning">
+                  <div class="scanning-circle"></div>
+                  <p class="status-text">🔍 Looking for face...</p>
+                </div>
+                
+                <!-- Face Detected with Countdown -->
+                <div *ngIf="faceDetected && captureCountdown > 0" class="detection-status countdown">
+                  <div class="countdown-circle">
+                    <span class="countdown-number">{{ captureCountdown }}</span>
+                  </div>
+                  <p class="status-text">📸 Auto-capturing in {{ captureCountdown }}s</p>
+                </div>
+                
+                <!-- Face Guide (when no detection active) -->
+                <div *ngIf="!isDetectingFace" class="face-guide">
+                  <div class="face-circle"></div>
+                  <p class="guide-text">Position your face within the circle</p>
+                </div>
+              </div>
+            </div>
+            <canvas #canvasElement style="display: none;"></canvas>
+            
+            <!-- Detection Status Info -->
+            <div class="detection-info">
+              <div class="status-indicator" [class.active]="faceDetected">
+                <span class="indicator-dot"></span>
+                <span *ngIf="!faceDetected">No face detected</span>
+                <span *ngIf="faceDetected && captureCountdown === 0">Face detected - Ready!</span>
+                <span *ngIf="faceDetected && captureCountdown > 0">Face detected - Capturing in {{ captureCountdown }}s</span>
+              </div>
+            </div>
+            
+            <div class="camera-actions">
+              <button type="button" class="btn btn-primary capture-btn" (click)="captureImage()">
+                📸 Manual Capture
+              </button>
+              <button type="button" class="btn btn-secondary" (click)="stopCamera()">
+                ❌ Stop Camera
+              </button>
+            </div>
+            
+            <div class="camera-tips">
+              <p><strong>Auto-Capture Tips:</strong></p>
+              <ul>
+                <li>Look directly at the camera</li>
+                <li>Keep your face in the center</li>
+                <li>Stay still when countdown begins</li>
+                <li>Ensure good lighting on your face</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary" 
+          (click)="resetForm()"
+          [disabled]="isSubmitting">
+          Reset Form
+        </button>
+        
+        <button 
+          type="submit" 
+          class="btn btn-primary" 
+          [disabled]="isSubmitting || !registrationForm.form.valid">
+          <span *ngIf="isSubmitting">Registering...</span>
+          <span *ngIf="!isSubmitting">Register Employee</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
