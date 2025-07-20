@@ -71,3 +71,5 @@ INSERT INTO persons (name, email, phone, department, position, status, notes) VA
 SELECT 'Database setup completed successfully!' as message;
 SELECT table_name FROM information_schema.tables WHERE table_schema = 'attendance_system';
 SELECT * FROM persons;
+
+
