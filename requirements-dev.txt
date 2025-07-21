@@ -1,0 +1,29 @@
+# Development Dependencies
+# Code Formatting and Linting
+black==23.12.1
+flake8==6.1.0
+isort==5.13.2
+pylint==3.0.3
+
+# Type Checking
+mypy==1.8.0
+
+# Documentation
+Sphinx==7.2.6
+sphinx-rtd-theme==2.0.0
+
+# Database Migrations
+alembic==1.13.1
+
+# Testing
+coverage==7.4.0
+factory-boy==3.3.0
+faker==22.2.0
+
+# Debugging
+pdb++==0.10.3
+ipython==8.18.1
+
+# Performance Profiling
+memory-profiler==0.61.0
+line-profiler==4.1.1
