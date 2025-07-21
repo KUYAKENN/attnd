@@ -2,7 +2,7 @@
   <div class="nav-container">
     <!-- Logo/Brand -->
     <div class="nav-brand">
-      <a routerLink="/" class="brand-link">
+      <a (click)="navigateToLive()" class="brand-link">
         <span class="brand-icon">👤</span>
         <span class="brand-text">AttendanceSystem</span>
       </a>
@@ -10,44 +10,50 @@
 
     <!-- Desktop Navigation -->
     <div class="nav-menu" [ngClass]="{'active': isMenuOpen}">
-      <a routerLink="/dashboard" 
-         routerLinkActive="active" 
-         class="nav-link"
-         (click)="closeMenu()">
+      <a (click)="navigateToProtectedRoute('/dashboard')" 
+         class="nav-link nav-protected"
+         title="Requires admin password">
         <span class="nav-icon">🏠</span>
         Dashboard
+        <span class="lock-icon">🔒</span>
       </a>
       
-      <a routerLink="/live-attendance" 
-         routerLinkActive="active" 
-         class="nav-link live-link"
-         (click)="closeMenu()">
+      <a (click)="navigateToLive()" 
+         class="nav-link live-link">
         <span class="nav-icon">🎥</span>
         Live Scan
       </a>
       
-      <a routerLink="/attendance" 
-         routerLinkActive="active" 
-         class="nav-link"
-         (click)="closeMenu()">
+      <a (click)="navigateToProtectedRoute('/attendance')" 
+         class="nav-link nav-protected"
+         title="Requires admin password">
         <span class="nav-icon">📊</span>
         Attendance
+        <span class="lock-icon">🔒</span>
       </a>
       
-      <a routerLink="/registration" 
-         routerLinkActive="active" 
-         class="nav-link"
-         (click)="closeMenu()">
+      <a (click)="navigateToProtectedRoute('/registration')" 
+         class="nav-link nav-protected"
+         title="Requires admin password">
         <span class="nav-icon">➕</span>
         Register
+        <span class="lock-icon">🔒</span>
       </a>
       
-      <a routerLink="/employees" 
-         routerLinkActive="active" 
-         class="nav-link"
-         (click)="closeMenu()">
+      <a (click)="navigateToProtectedRoute('/employees')" 
+         class="nav-link nav-protected"
+         title="Requires admin password">
         <span class="nav-icon">👥</span>
         Employees
+        <span class="lock-icon">🔒</span>
+      </a>
+      
+      <a (click)="navigateToProtectedRoute('/export')" 
+         class="nav-link nav-protected"
+         title="Requires admin password">
+        <span class="nav-icon">📁</span>
+        Export
+        <span class="lock-icon">🔒</span>
       </a>
     </div>
 

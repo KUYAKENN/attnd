@@ -240,10 +240,101 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Protected navigation links */
+.nav-protected {
+  position: relative;
+  cursor: pointer;
+}
+
+.nav-protected:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.lock-icon {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-left: 0.5rem;
+}
+
+.nav-protected:hover .lock-icon {
+  opacity: 1;
+}
+
+/* Authentication status */
+.auth-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.auth-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.auth-icon {
+  font-size: 0.75rem;
+}
+
+.logout-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.logout-icon {
+  font-size: 0.875rem;
+}
+
+/* Mobile auth status */
+@media (max-width: 768px) {
+  .auth-status {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .auth-indicator {
+    font-size: 1rem;
+  }
+
+  .logout-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .logout-icon {
+    font-size: 1rem;
+  }
+}
+
 /* Focus states for accessibility */
 .nav-link:focus,
 .brand-link:focus,
-.nav-toggle:focus {
+.nav-toggle:focus,
+.logout-btn:focus {
   outline: 2px solid rgba(255, 255, 255, 0.5);
   outline-offset: 2px;
 }

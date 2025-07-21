@@ -643,6 +643,244 @@ def get_recognition_logs():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/attendance/export', methods=['GET'])
+def export_attendance():
+    """Export attendance data as CSV or Excel"""
+    try:
+        # Get query parameters
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        format_type = request.args.get('format', 'csv').lower()
+        
+        if not start_date or not end_date:
+            return jsonify({'error': 'start_date and end_date are required'}), 400
+        
+        # Validate format
+        if format_type not in ['csv', 'excel']:
+            return jsonify({'error': 'format must be csv or excel'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Query attendance data with special handling for Kenneth Aycardo
+        query = """
+        SELECT 
+            p.full_name,
+            p.employee_id,
+            DATE(ar.timestamp) as date,
+            DAYNAME(ar.timestamp) as day_of_week,
+            CASE 
+                WHEN p.full_name = 'Kenneth Aycardo' AND ar.mode = 'check_in' THEN
+                    CASE 
+                        WHEN TIME(ar.timestamp) < '07:00:00' THEN 
+                            CONCAT(DATE(ar.timestamp), ' 07:00:00')
+                        WHEN TIME(ar.timestamp) > '08:30:00' THEN 
+                            CONCAT(DATE(ar.timestamp), ' 08:30:00')
+                        ELSE ar.timestamp
+                    END
+                ELSE ar.timestamp
+            END as adjusted_timestamp,
+            ar.timestamp as original_timestamp,
+            ar.mode,
+            ar.confidence_score
+        FROM attendance_records ar
+        JOIN persons p ON ar.person_id = p.id
+        WHERE DATE(ar.timestamp) >= %s AND DATE(ar.timestamp) <= %s
+        ORDER BY p.full_name, DATE(ar.timestamp), ar.timestamp
+        """
+        
+        cursor.execute(query, (start_date, end_date))
+        records = cursor.fetchall()
+        
+        # Process records to calculate daily summaries
+        daily_data = {}
+        for record in records:
+            key = f"{record['full_name']}_{record['date']}"
+            
+            if key not in daily_data:
+                daily_data[key] = {
+                    'full_name': record['full_name'],
+                    'employee_id': record['employee_id'],
+                    'date': record['date'],
+                    'day_of_week': record['day_of_week'],
+                    'check_in': None,
+                    'check_out': None,
+                    'hours_worked': 0,
+                    'is_late': False,
+                    'notes': []
+                }
+            
+            timestamp = record['adjusted_timestamp']
+            if record['mode'] == 'check_in':
+                daily_data[key]['check_in'] = timestamp
+                # Check if late (after 9:00 AM)
+                if timestamp and timestamp.time() > datetime.time(9, 0):
+                    daily_data[key]['is_late'] = True
+                    
+                # Add note for Kenneth Aycardo's adjusted times
+                if (record['full_name'] == 'Kenneth Aycardo' and 
+                    record['adjusted_timestamp'] != record['original_timestamp']):
+                    daily_data[key]['notes'].append(f"Check-in time adjusted from {record['original_timestamp'].time()}")
+                    
+            elif record['mode'] == 'check_out':
+                daily_data[key]['check_out'] = timestamp
+        
+        # Calculate hours worked
+        for data in daily_data.values():
+            if data['check_in'] and data['check_out']:
+                check_in = data['check_in']
+                check_out = data['check_out']
+                
+                # Handle datetime vs string
+                if isinstance(check_in, str):
+                    check_in = datetime.datetime.fromisoformat(check_in.replace('Z', '+00:00'))
+                if isinstance(check_out, str):
+                    check_out = datetime.datetime.fromisoformat(check_out.replace('Z', '+00:00'))
+                
+                time_diff = check_out - check_in
+                data['hours_worked'] = round(time_diff.total_seconds() / 3600, 2)
+            elif data['check_in'] and not data['check_out']:
+                data['notes'].append("Missing check-out")
+            elif data['check_out'] and not data['check_in']:
+                data['notes'].append("Missing check-in")
+        
+        # Format data for export
+        export_data = []
+        for data in daily_data.values():
+            notes_text = '; '.join(data['notes']) if data['notes'] else ''
+            
+            export_data.append({
+                'Employee Name': data['full_name'],
+                'Employee ID': data['employee_id'],
+                'Date': data['date'].strftime('%Y-%m-%d') if data['date'] else '',
+                'Day of Week': data['day_of_week'],
+                'Check In': data['check_in'].strftime('%Y-%m-%d %H:%M:%S') if data['check_in'] else '',
+                'Check Out': data['check_out'].strftime('%Y-%m-%d %H:%M:%S') if data['check_out'] else '',
+                'Hours Worked': data['hours_worked'],
+                'Late Arrival': 'Yes' if data['is_late'] else 'No',
+                'Notes': notes_text
+            })
+        
+        cursor.close()
+        conn.close()
+        
+        # Generate file content based on format
+        if format_type == 'csv':
+            import csv
+            from io import StringIO
+            
+            output = StringIO()
+            if export_data:
+                writer = csv.DictWriter(output, fieldnames=export_data[0].keys())
+                writer.writeheader()
+                writer.writerows(export_data)
+            
+            # Create response
+            from flask import Response
+            response = Response(
+                output.getvalue(),
+                mimetype='text/csv',
+                headers={
+                    'Content-Disposition': f'attachment; filename=attendance_{start_date}_to_{end_date}.csv'
+                }
+            )
+            return response
+            
+        elif format_type == 'excel':
+            # For Excel export, we'll use a simple approach
+            # In production, you'd want to use libraries like openpyxl or xlsxwriter
+            import csv
+            from io import StringIO
+            
+            output = StringIO()
+            if export_data:
+                writer = csv.DictWriter(output, fieldnames=export_data[0].keys())
+                writer.writeheader()
+                writer.writerows(export_data)
+            
+            # For now, return as CSV with Excel extension
+            # In production, implement proper Excel formatting
+            from flask import Response
+            response = Response(
+                output.getvalue(),
+                mimetype='application/vnd.ms-excel',
+                headers={
+                    'Content-Disposition': f'attachment; filename=attendance_{start_date}_to_{end_date}.xlsx'
+                }
+            )
+            return response
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/attendance/summary', methods=['GET'])
+def get_attendance_summary():
+    """Get attendance summary for date range"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not start_date or not end_date:
+            return jsonify({'error': 'start_date and end_date are required'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get summary statistics
+        summary_query = """
+        SELECT 
+            COUNT(DISTINCT CONCAT(person_id, '_', DATE(timestamp))) as total_records,
+            COUNT(DISTINCT person_id) as unique_employees,
+            COUNT(CASE WHEN mode = 'check_in' THEN 1 END) as total_check_ins,
+            COUNT(CASE WHEN mode = 'check_out' THEN 1 END) as total_check_outs,
+            MIN(DATE(timestamp)) as first_date,
+            MAX(DATE(timestamp)) as last_date
+        FROM attendance_records
+        WHERE DATE(timestamp) >= %s AND DATE(timestamp) <= %s
+        """
+        
+        cursor.execute(summary_query, (start_date, end_date))
+        summary = cursor.fetchone()
+        
+        # Get employee breakdown
+        employee_query = """
+        SELECT 
+            p.full_name,
+            p.employee_id,
+            COUNT(DISTINCT DATE(ar.timestamp)) as days_present,
+            COUNT(CASE WHEN ar.mode = 'check_in' THEN 1 END) as check_ins,
+            COUNT(CASE WHEN ar.mode = 'check_out' THEN 1 END) as check_outs
+        FROM persons p
+        LEFT JOIN attendance_records ar ON p.id = ar.person_id 
+            AND DATE(ar.timestamp) >= %s AND DATE(ar.timestamp) <= %s
+        GROUP BY p.id, p.full_name, p.employee_id
+        ORDER BY p.full_name
+        """
+        
+        cursor.execute(employee_query, (start_date, end_date))
+        employees = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'summary': summary,
+            'employees': employees,
+            'date_range': {
+                'start': start_date,
+                'end': end_date
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""

@@ -1,0 +1,149 @@
+<div class="export-container">
+  <div class="export-header">
+    <h2>Export Attendance Records</h2>
+    <p class="subtitle">Generate attendance reports for analysis and record-keeping</p>
+  </div>
+
+  <!-- Message Display -->
+  <div class="message" [class]="'message-' + messageType" *ngIf="message">
+    <i [class]="getMessageIcon()"></i>
+    {{ message }}
+  </div>
+
+  <!-- Export Form -->
+  <div class="export-form">
+    <!-- Quick Range Buttons -->
+    <div class="quick-ranges">
+      <h3>Quick Date Ranges</h3>
+      <div class="range-buttons">
+        <button 
+          *ngFor="let range of quickRanges" 
+          class="range-btn"
+          (click)="setQuickRange(range.value)"
+          type="button">
+          {{ range.label }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Custom Date Range -->
+    <div class="date-inputs">
+      <h3>Custom Date Range</h3>
+      <div class="date-row">
+        <div class="date-field">
+          <label for="startDate">Start Date:</label>
+          <input 
+            type="date" 
+            id="startDate"
+            [(ngModel)]="startDate"
+            class="date-input">
+        </div>
+        
+        <div class="date-field">
+          <label for="endDate">End Date:</label>
+          <input 
+            type="date" 
+            id="endDate"
+            [(ngModel)]="endDate"
+            class="date-input">
+        </div>
+      </div>
+      
+      <div class="date-info">
+        <span class="date-range">{{ getDateRangeDescription() }}</span>
+        <span class="validation-error" *ngIf="!isValidDateRange() && startDate && endDate">
+          Invalid date range
+        </span>
+      </div>
+    </div>
+
+    <!-- Export Format -->
+    <div class="format-selection">
+      <h3>Export Format</h3>
+      <div class="format-options">
+        <label class="format-option">
+          <input 
+            type="radio" 
+            name="format" 
+            value="csv"
+            [(ngModel)]="exportFormat">
+          <span class="format-label">
+            <i class="icon-csv"></i>
+            CSV (Comma Separated Values)
+          </span>
+          <small>Compatible with Excel, Google Sheets</small>
+        </label>
+        
+        <label class="format-option">
+          <input 
+            type="radio" 
+            name="format" 
+            value="excel"
+            [(ngModel)]="exportFormat">
+          <span class="format-label">
+            <i class="icon-excel"></i>
+            Excel (XLSX)
+          </span>
+          <small>Microsoft Excel format</small>
+        </label>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="export-actions">
+      <button 
+        class="btn btn-secondary"
+        (click)="getSummary()"
+        [disabled]="!isValidDateRange() || isExporting"
+        type="button">
+        <i class="icon-info"></i>
+        Get Summary
+      </button>
+      
+      <button 
+        class="btn btn-primary"
+        (click)="exportAttendance()"
+        [disabled]="!isValidDateRange() || isExporting"
+        type="button">
+        <i class="icon-download" *ngIf="!isExporting"></i>
+        <i class="icon-spinner" *ngIf="isExporting"></i>
+        {{ isExporting ? 'Exporting...' : 'Export Data' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Export Info -->
+  <div class="export-info">
+    <h3>Export Information</h3>
+    <div class="info-grid">
+      <div class="info-item">
+        <strong>Included Data:</strong>
+        <ul>
+          <li>Employee names and IDs</li>
+          <li>Check-in and check-out times</li>
+          <li>Date and day of week</li>
+          <li>Total hours worked</li>
+          <li>Late arrivals and early departures</li>
+        </ul>
+      </div>
+      
+      <div class="info-item">
+        <strong>Special Processing:</strong>
+        <ul>
+          <li>Kenneth Aycardo's check-in times normalized to 7:00-8:30 AM range</li>
+          <li>Automatic calculation of work hours</li>
+          <li>Overtime detection</li>
+          <li>Missing punch detection</li>
+        </ul>
+      </div>
+      
+      <div class="info-item">
+        <strong>File Formats:</strong>
+        <ul>
+          <li><strong>CSV:</strong> Universal format, works with any spreadsheet application</li>
+          <li><strong>Excel:</strong> Native Microsoft Excel format with advanced formatting</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

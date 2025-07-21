@@ -205,7 +205,7 @@ export class AttendanceComponent implements OnInit, OnDestroy {
 
   getPersonName(personId: number): string {
     const person = this.persons.find(p => p.id === personId);
-    return person ? person.name : 'Unknown';
+    return person ? (person.department ?? 'Unknown') : 'Unknown';
   }
 
   formatTime(timeString: string): string {
