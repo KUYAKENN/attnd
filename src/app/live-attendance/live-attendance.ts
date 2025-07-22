@@ -280,6 +280,14 @@ export class LiveAttendanceComponent implements OnInit, OnDestroy {
       this.attendanceMode = this.attendanceMode === 'check_in' ? 'check_out' : 'check_in';
       this.showPasswordModal = false;
       this.passwordInput = '';
+      
+      // Resume scanning with the new mode if camera is active
+      if (this.cameraStatus === 'active') {
+        this.cameraService.stopContinuousScanning();
+        setTimeout(() => {
+          this.cameraService.resumeScanning(2000, this.attendanceMode);
+        }, 500); // Brief pause before resuming with new mode
+      }
     } else {
       alert('Incorrect password!');
       this.passwordInput = '';
@@ -306,5 +314,15 @@ export class LiveAttendanceComponent implements OnInit, OnDestroy {
    */
   getModeColorClass(): string {
     return this.attendanceMode === 'check_in' ? 'mode-checkin' : 'mode-checkout';
+  }
+
+  /**
+   * Get confidence display with proper formatting
+   */
+  getConfidenceDisplay(similarity?: number): string {
+    if (similarity === undefined || similarity === null || isNaN(similarity)) {
+      return 'N/A';
+    }
+    return `${(similarity * 100).toFixed(1)}%`;
   }
 }

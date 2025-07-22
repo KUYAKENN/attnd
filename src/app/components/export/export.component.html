@@ -1,6 +1,6 @@
 <div class="export-container">
   <div class="export-header">
-    <h2>Export Attendance Records</h2>
+    <h2>📊 Export Attendance Records</h2>
     <p class="subtitle">Generate attendance reports for analysis and record-keeping</p>
   </div>
 
@@ -10,139 +10,250 @@
     {{ message }}
   </div>
 
-  <!-- Export Form -->
-  <div class="export-form">
-    <!-- Quick Range Buttons -->
-    <div class="quick-ranges">
-      <h3>Quick Date Ranges</h3>
-      <div class="range-buttons">
+  <!-- Export Options Tabs -->
+  <div class="export-tabs">
+    <div class="tab-buttons">
+      <button class="tab-btn" (click)="activeTab = 'monthly'" [class.active]="activeTab === 'monthly'">
+        📅 Monthly Export
+      </button>
+      <button class="tab-btn" (click)="activeTab = 'custom'" [class.active]="activeTab === 'custom'">
+        🎯 Custom Range
+      </button>
+    </div>
+
+    <!-- Monthly Export Tab -->
+    <div class="tab-content" [class.hidden]="activeTab !== 'monthly'">
+      <div class="monthly-export">
+        <h3>Monthly Attendance Export</h3>
+        <p class="description">Export attendance records for a specific month in Excel format with summary statistics.</p>
+        
+        <div class="month-selection">
+          <div class="month-field">
+            <label for="selectedMonth">Month:</label>
+            <select id="selectedMonth" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthChange()" class="month-select">
+              <option *ngFor="let month of availableMonths" [value]="month.value">
+                {{ month.label }}
+              </option>
+            </select>
+          </div>
+          
+          <div class="year-field">
+            <label for="selectedYear">Year:</label>
+            <select id="selectedYear" [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()" class="year-select">
+              <option *ngFor="let year of availableYears" [value]="year">
+                {{ year }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="monthly-info" *ngIf="selectedMonth && selectedYear">
+          <span class="selected-period">
+            📅 Selected: {{ selectedMonthLabel }} {{ selectedYear }}
+          </span>
+        </div>
+
+        <div class="monthly-actions">
+          <button 
+            class="btn btn-primary excel-btn"
+            (click)="exportMonthlyAttendance()"
+            [disabled]="!selectedMonth || !selectedYear || isExporting"
+            type="button">
+            <i class="icon-excel" *ngIf="!isExporting"></i>
+            <i class="icon-spinner" *ngIf="isExporting"></i>
+            {{ isExporting ? 'Exporting...' : 'Export Monthly Excel Report' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Range Export Tab -->
+    <div class="tab-content" [class.hidden]="activeTab !== 'custom'">
+      <!-- Quick Range Buttons -->
+      <div class="quick-ranges">
+        <h3>Quick Date Ranges</h3>
+        <div class="range-buttons">
+          <button 
+            *ngFor="let range of quickRanges" 
+            class="range-btn"
+            (click)="setQuickRange(range.value)"
+            type="button">
+            {{ range.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Custom Date Range -->
+      <div class="date-inputs">
+        <h3>Custom Date Range</h3>
+        <div class="date-row">
+          <div class="date-field">
+            <label for="startDate">Start Date:</label>
+            <input 
+              type="date" 
+              id="startDate"
+              [(ngModel)]="startDate"
+              class="date-input">
+          </div>
+          
+          <div class="date-field">
+            <label for="endDate">End Date:</label>
+            <input 
+              type="date" 
+              id="endDate"
+              [(ngModel)]="endDate"
+              class="date-input">
+          </div>
+        </div>
+        
+        <div class="date-info">
+          <span class="date-range">{{ getDateRangeDescription() }}</span>
+          <span class="validation-error" *ngIf="!isValidDateRange() && startDate && endDate">
+            Invalid date range
+          </span>
+        </div>
+      </div>
+
+      <!-- Export Format -->
+      <div class="format-selection">
+        <h3>Export Format</h3>
+        <div class="format-options">
+          <label class="format-option">
+            <input 
+              type="radio" 
+              name="format" 
+              value="csv"
+              [(ngModel)]="exportFormat">
+            <span class="format-label">
+              <i class="icon-csv"></i>
+              CSV (Comma Separated Values)
+            </span>
+            <small>Compatible with Excel, Google Sheets</small>
+          </label>
+          
+          <label class="format-option">
+            <input 
+              type="radio" 
+              name="format" 
+              value="excel"
+              [(ngModel)]="exportFormat">
+            <span class="format-label">
+              <i class="icon-excel"></i>
+              Excel (XLSX)
+            </span>
+            <small>Microsoft Excel format with formatting</small>
+          </label>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="export-actions">
         <button 
-          *ngFor="let range of quickRanges" 
-          class="range-btn"
-          (click)="setQuickRange(range.value)"
+          class="btn btn-secondary"
+          (click)="toggleSummary()"
+          [disabled]="!isValidDateRange()"
           type="button">
-          {{ range.label }}
+          <i class="icon-info"></i>
+          {{ showSummary ? 'Hide Summary' : 'Show Summary' }}
+        </button>
+
+        <button 
+          class="btn btn-primary"
+          (click)="exportAttendance()"
+          [disabled]="!isValidDateRange() || isExporting"
+          type="button">
+          <i class="icon-download"></i>
+          {{ isExporting ? 'Exporting...' : 'Export Attendance' }}
         </button>
       </div>
     </div>
+  </div>
 
-    <!-- Custom Date Range -->
-    <div class="date-inputs">
-      <h3>Custom Date Range</h3>
-      <div class="date-row">
-        <div class="date-field">
-          <label for="startDate">Start Date:</label>
-          <input 
-            type="date" 
-            id="startDate"
-            [(ngModel)]="startDate"
-            class="date-input">
+  <!-- Summary Section -->
+  <div class="summary-section" *ngIf="showSummary && summaryData">
+    <div class="summary-card">
+      <h3>📈 Attendance Summary</h3>
+      <div class="summary-stats">
+        <div class="stat-item">
+          <span class="stat-label">Total Employees:</span>
+          <span class="stat-value">{{ summaryData.summary.total_employees }}</span>
         </div>
-        
-        <div class="date-field">
-          <label for="endDate">End Date:</label>
-          <input 
-            type="date" 
-            id="endDate"
-            [(ngModel)]="endDate"
-            class="date-input">
+        <div class="stat-item">
+          <span class="stat-label">Total Records:</span>
+          <span class="stat-value">{{ summaryData.summary.total_attendance_records }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Total Hours:</span>
+          <span class="stat-value">{{ summaryData.summary.total_hours_worked }} hrs</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Average Daily Hours:</span>
+          <span class="stat-value">{{ summaryData.summary.avg_daily_hours }} hrs</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Late Instances:</span>
+          <span class="stat-value warning">{{ summaryData.summary.late_instances }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Overtime Hours:</span>
+          <span class="stat-value">{{ summaryData.summary.total_overtime_hours }} hrs</span>
         </div>
       </div>
-      
-      <div class="date-info">
-        <span class="date-range">{{ getDateRangeDescription() }}</span>
-        <span class="validation-error" *ngIf="!isValidDateRange() && startDate && endDate">
-          Invalid date range
-        </span>
-      </div>
-    </div>
 
-    <!-- Export Format -->
-    <div class="format-selection">
-      <h3>Export Format</h3>
-      <div class="format-options">
-        <label class="format-option">
-          <input 
-            type="radio" 
-            name="format" 
-            value="csv"
-            [(ngModel)]="exportFormat">
-          <span class="format-label">
-            <i class="icon-csv"></i>
-            CSV (Comma Separated Values)
-          </span>
-          <small>Compatible with Excel, Google Sheets</small>
-        </label>
-        
-        <label class="format-option">
-          <input 
-            type="radio" 
-            name="format" 
-            value="excel"
-            [(ngModel)]="exportFormat">
-          <span class="format-label">
-            <i class="icon-excel"></i>
-            Excel (XLSX)
-          </span>
-          <small>Microsoft Excel format</small>
-        </label>
+      <!-- Employee Summary Table -->
+      <div class="employee-summary" *ngIf="summaryData.employees.length > 0">
+        <h4>Employee Details</h4>
+        <div class="summary-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Days Present</th>
+                <th>Total Hours</th>
+                <th>Avg Hours/Day</th>
+                <th>Late Days</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let emp of summaryData.employees">
+                <td>{{ emp.name }}</td>
+                <td>{{ emp.department }}</td>
+                <td>{{ emp.days_present }}</td>
+                <td>{{ emp.total_hours || 0 }} hrs</td>
+                <td>{{ emp.avg_hours || 0 }} hrs</td>
+                <td [class.warning]="emp.late_days > 0">{{ emp.late_days }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="export-actions">
-      <button 
-        class="btn btn-secondary"
-        (click)="getSummary()"
-        [disabled]="!isValidDateRange() || isExporting"
-        type="button">
-        <i class="icon-info"></i>
-        Get Summary
-      </button>
-      
-      <button 
-        class="btn btn-primary"
-        (click)="exportAttendance()"
-        [disabled]="!isValidDateRange() || isExporting"
-        type="button">
-        <i class="icon-download" *ngIf="!isExporting"></i>
-        <i class="icon-spinner" *ngIf="isExporting"></i>
-        {{ isExporting ? 'Exporting...' : 'Export Data' }}
-      </button>
     </div>
   </div>
 
-  <!-- Export Info -->
+  <!-- Export Information -->
   <div class="export-info">
-    <h3>Export Information</h3>
+    <h3>ℹ️ Export Information</h3>
     <div class="info-grid">
       <div class="info-item">
-        <strong>Included Data:</strong>
+        <h4>📄 CSV Format</h4>
+        <p>Plain text format compatible with most spreadsheet applications. Smaller file size.</p>
+      </div>
+      
+      <div class="info-item">
+        <h4>📊 Excel Format</h4>
+        <p>Advanced Excel format with formatting, multiple sheets, and summary statistics. Includes:</p>
         <ul>
-          <li>Employee names and IDs</li>
-          <li>Check-in and check-out times</li>
-          <li>Date and day of week</li>
-          <li>Total hours worked</li>
-          <li>Late arrivals and early departures</li>
+          <li>Formatted attendance records</li>
+          <li>Employee summary sheet</li>
+          <li>Auto-adjusted column widths</li>
+          <li>Professional styling</li>
         </ul>
       </div>
       
       <div class="info-item">
-        <strong>Special Processing:</strong>
-        <ul>
-          <li>Kenneth Aycardo's check-in times normalized to 7:00-8:30 AM range</li>
-          <li>Automatic calculation of work hours</li>
-          <li>Overtime detection</li>
-          <li>Missing punch detection</li>
-        </ul>
-      </div>
-      
-      <div class="info-item">
-        <strong>File Formats:</strong>
-        <ul>
-          <li><strong>CSV:</strong> Universal format, works with any spreadsheet application</li>
-          <li><strong>Excel:</strong> Native Microsoft Excel format with advanced formatting</li>
-        </ul>
+        <h4>⭐ Data Processing</h4>
+        <p>All attendance records are processed accurately with actual check-in and check-out times, comprehensive hour calculations, and overtime detection.</p>
       </div>
     </div>
   </div>

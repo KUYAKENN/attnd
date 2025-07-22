@@ -139,6 +139,16 @@ export class CameraService {
   }
 
   /**
+   * Resume scanning after pause
+   */
+  resumeScanning(intervalMs: number = 2000, mode: 'check_in' | 'check_out' = 'check_in'): void {
+    if (!this.isProcessing && this.videoElement) {
+      this.isProcessing = true;
+      this.scanForFaces(intervalMs, mode);
+    }
+  }
+
+  /**
    * Private method for continuous face scanning
    */
   private scanForFaces(intervalMs: number, mode: 'check_in' | 'check_out' = 'check_in'): void {
@@ -152,9 +162,24 @@ export class CameraService {
         next: (result) => {
           this.recognitionResultSubject.next(result);
           
-          // If face recognized, wait longer before next scan
-          const nextScanDelay = result.recognized ? intervalMs * 3 : intervalMs;
-          setTimeout(() => this.scanForFaces(intervalMs, mode), nextScanDelay);
+          // If face recognized and attendance recorded successfully, stop scanning temporarily
+          if (result.recognized && result.success) {
+            this.isProcessing = false; // Stop continuous scanning
+            
+            // Resume scanning after 10 seconds to allow for mode changes
+            setTimeout(() => {
+              if (!this.isProcessing) { // Only resume if not manually stopped
+                this.isProcessing = true;
+                this.scanForFaces(intervalMs, mode);
+              }
+            }, 10000); // 10 second pause after successful recognition
+          } else if (result.recognized && !result.success) {
+            // If recognized but attendance failed (already checked in/out), wait longer
+            setTimeout(() => this.scanForFaces(intervalMs, mode), intervalMs * 2);
+          } else {
+            // If not recognized, continue with normal interval
+            setTimeout(() => this.scanForFaces(intervalMs, mode), intervalMs);
+          }
         },
         error: (error) => {
           console.error('Face recognition error:', error);

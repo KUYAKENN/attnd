@@ -12,6 +12,7 @@
     <div class="nav-menu" [ngClass]="{'active': isMenuOpen}">
       <a (click)="navigateToProtectedRoute('/dashboard')" 
          class="nav-link nav-protected"
+         [ngClass]="{'active': isRouteActive('/dashboard')}"
          title="Requires admin password">
         <span class="nav-icon">🏠</span>
         Dashboard
@@ -19,13 +20,15 @@
       </a>
       
       <a (click)="navigateToLive()" 
-         class="nav-link live-link">
+         class="nav-link live-link"
+         [ngClass]="{'active': isRouteActive('/live-attendance')}">
         <span class="nav-icon">🎥</span>
         Live Scan
       </a>
       
       <a (click)="navigateToProtectedRoute('/attendance')" 
          class="nav-link nav-protected"
+         [ngClass]="{'active': isRouteActive('/attendance')}"
          title="Requires admin password">
         <span class="nav-icon">📊</span>
         Attendance
@@ -34,6 +37,7 @@
       
       <a (click)="navigateToProtectedRoute('/registration')" 
          class="nav-link nav-protected"
+         [ngClass]="{'active': isRouteActive('/registration')}"
          title="Requires admin password">
         <span class="nav-icon">➕</span>
         Register
@@ -42,6 +46,7 @@
       
       <a (click)="navigateToProtectedRoute('/employees')" 
          class="nav-link nav-protected"
+         [ngClass]="{'active': isRouteActive('/employees')}"
          title="Requires admin password">
         <span class="nav-icon">👥</span>
         Employees
@@ -50,6 +55,7 @@
       
       <a (click)="navigateToProtectedRoute('/export')" 
          class="nav-link nav-protected"
+         [ngClass]="{'active': isRouteActive('/export')}"
          title="Requires admin password">
         <span class="nav-icon">📁</span>
         Export

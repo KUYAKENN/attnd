@@ -13,10 +13,34 @@ import { ExportService } from '../../services/export.service';
 export class ExportComponent {
   startDate: string = '';
   endDate: string = '';
-  exportFormat: 'csv' | 'excel' = 'csv';
+  exportFormat: 'csv' | 'excel' = 'excel'; // Default to Excel
+  selectedMonth: string = '';
+  selectedYear: string = '';
   isExporting: boolean = false;
   message: string = '';
   messageType: 'success' | 'error' | 'info' = 'info';
+  showSummary: boolean = false;
+  summaryData: any = null;
+  activeTab: 'monthly' | 'custom' = 'monthly';
+
+  // Computed properties to prevent infinite change detection
+  availableMonths = [
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ];
+
+  availableYears: string[] = [];
+  selectedMonthLabel: string = '';
 
   // Quick date range options
   quickRanges = [
@@ -33,6 +57,36 @@ export class ExportComponent {
   constructor(private exportService: ExportService) {
     // Set default to current month
     this.setQuickRange('thisMonth');
+    
+    // Initialize month/year selectors
+    const now = new Date();
+    this.selectedMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+    this.selectedYear = now.getFullYear().toString();
+    
+    // Initialize available years (current year ± 2 years)
+    this.initializeAvailableYears();
+    
+    // Update selected month label
+    this.updateSelectedMonthLabel();
+  }
+
+  /**
+   * Initialize available years
+   */
+  private initializeAvailableYears(): void {
+    const currentYear = new Date().getFullYear();
+    this.availableYears = [];
+    for (let year = currentYear - 2; year <= currentYear + 1; year++) {
+      this.availableYears.push(year.toString());
+    }
+  }
+
+  /**
+   * Update selected month label when month changes
+   */
+  private updateSelectedMonthLabel(): void {
+    const month = this.availableMonths.find(m => m.value === this.selectedMonth);
+    this.selectedMonthLabel = month ? month.label : '';
   }
 
   /**
@@ -156,6 +210,31 @@ export class ExportComponent {
   }
 
   /**
+   * Export monthly attendance - convenience method
+   */
+  exportMonthlyAttendance(): void {
+    if (!this.selectedMonth || !this.selectedYear) {
+      this.showMessage('Please select month and year', 'error');
+      return;
+    }
+
+    const year = parseInt(this.selectedYear);
+    const month = parseInt(this.selectedMonth);
+    
+    // Calculate first and last day of selected month
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    
+    this.startDate = this.formatDate(firstDay);
+    this.endDate = this.formatDate(lastDay);
+    
+    // Force Excel format for monthly export
+    this.exportFormat = 'excel';
+    
+    this.exportAttendance();
+  }
+
+  /**
    * Get attendance summary
    */
   getSummary(): void {
@@ -168,7 +247,9 @@ export class ExportComponent {
       .subscribe({
         next: (summary) => {
           console.log('Attendance Summary:', summary);
-          this.showMessage(`Summary: ${summary.total_records} records found`, 'info');
+          this.summaryData = summary;
+          this.showSummary = true;
+          this.showMessage(`Summary loaded: ${summary.summary.total_attendance_records} records found`, 'info');
         },
         error: (error) => {
           console.error('Summary error:', error);
@@ -209,6 +290,35 @@ export class ExportComponent {
   }
 
   /**
+   * Set month/year from quick range selection
+   */
+  setMonthFromQuickRange(range: string): void {
+    const now = new Date();
+    
+    if (range === 'thisMonth') {
+      this.selectedMonth = (now.getMonth() + 1).toString().padStart(2, '0');
+      this.selectedYear = now.getFullYear().toString();
+    } else if (range === 'lastMonth') {
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      this.selectedMonth = (lastMonth.getMonth() + 1).toString().padStart(2, '0');
+      this.selectedYear = lastMonth.getFullYear().toString();
+    }
+    
+    // Update the label when month changes
+    this.updateSelectedMonthLabel();
+  }
+
+  /**
+   * Toggle summary display
+   */
+  toggleSummary(): void {
+    this.showSummary = !this.showSummary;
+    if (this.showSummary && !this.summaryData) {
+      this.getSummary();
+    }
+  }
+
+  /**
    * Get message icon class
    */
   getMessageIcon(): string {
@@ -218,5 +328,19 @@ export class ExportComponent {
       case 'info': return 'icon-info';
       default: return 'icon-info';
     }
+  }
+
+  /**
+   * Handle month selection change
+   */
+  onMonthChange(): void {
+    this.updateSelectedMonthLabel();
+  }
+
+  /**
+   * Handle year selection change
+   */
+  onYearChange(): void {
+    this.updateSelectedMonthLabel();
   }
 }

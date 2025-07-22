@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-navbar',
@@ -9,11 +10,34 @@ import { RouterModule, Router } from '@angular/router';
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.css'
 })
-export class NavbarComponent {
+export class NavbarComponent implements OnInit {
   isMenuOpen = false;
+  currentRoute = '';
   private readonly ADMIN_PASSWORD = 'qunabydevs7719';
 
   constructor(private router: Router) {}
+
+  ngOnInit(): void {
+    // Track route changes to update active state
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe((event: NavigationEnd) => {
+        this.currentRoute = event.urlAfterRedirects;
+      });
+    
+    // Set initial route
+    this.currentRoute = this.router.url;
+  }
+
+  /**
+   * Check if a route is currently active
+   */
+  isRouteActive(route: string): boolean {
+    if (route === '/live-attendance') {
+      return this.currentRoute === '/' || this.currentRoute === '/live-attendance';
+    }
+    return this.currentRoute === route;
+  }
 
   toggleMenu(): void {
     this.isMenuOpen = !this.isMenuOpen;

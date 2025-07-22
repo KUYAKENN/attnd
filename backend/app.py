@@ -11,8 +11,11 @@ import mysql.connector
 from sklearn.metrics.pairwise import cosine_similarity
 import insightface
 from insightface.app import FaceAnalysis
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
+import pandas as pd
+from io import BytesIO
+import xlsxwriter
 
 app = Flask(__name__)
 CORS(app)
@@ -190,16 +193,8 @@ def record_attendance(person_id, person_name, confidence_score, face_data, mode=
                     'message': f'{person_name}, you have already checked in today. Your check-in time was {existing[1].strftime("%H:%M:%S")}.'
                 }
             
-            # Apply Kenneth Aycardo special handling for check-in times
-            now = datetime.datetime.now()
-            actual_time = now
-            
-            if person_name == 'Kenneth Aycardo':
-                # Normalize Kenneth's check-in time to 7:00-8:30 range
-                if now.time() < datetime.time(7, 0):
-                    actual_time = now.replace(hour=7, minute=0, second=0, microsecond=0)
-                elif now.time() > datetime.time(8, 30):
-                    actual_time = now.replace(hour=8, minute=30, second=0, microsecond=0)
+            # Record actual check-in time
+            actual_time = datetime.datetime.now()
             
             # Insert new check-in record
             insert_query = """
@@ -683,6 +678,226 @@ def get_recognition_logs():
         return jsonify(logs)
         
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/attendance/export', methods=['GET'])
+def export_attendance():
+    """Export attendance records to CSV or Excel"""
+    try:
+        # Get query parameters
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        format_type = request.args.get('format', 'csv').lower()
+        
+        if not start_date or not end_date:
+            return jsonify({'error': 'start_date and end_date are required'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        # Query attendance data with employee details
+        query = """
+            SELECT 
+                p.employee_id,
+                p.name as employee_name,
+                p.department,
+                p.position,
+                ar.date,
+                ar.check_in_time,
+                ar.check_out_time,
+                ar.total_hours,
+                ar.overtime_hours,
+                ar.status,
+                ar.check_in_method,
+                ar.check_out_method,
+                ar.location,
+                ar.notes
+            FROM attendance_records ar
+            JOIN persons p ON ar.person_id = p.id
+            WHERE ar.date BETWEEN %s AND %s
+            AND p.status = 'active'
+            ORDER BY ar.date DESC, p.name ASC
+        """
+        
+        # Execute query and get data
+        df = pd.read_sql(query, conn, params=[start_date, end_date])
+        conn.close()
+        
+        if df.empty:
+            return jsonify({'error': 'No attendance records found for the specified date range'}), 404
+        
+        # Format datetime columns
+        df['check_in_time'] = pd.to_datetime(df['check_in_time']).dt.strftime('%H:%M:%S')
+        df['check_out_time'] = pd.to_datetime(df['check_out_time']).dt.strftime('%H:%M:%S')
+        df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+        
+        # Replace NaN values
+        df = df.fillna('')
+        
+        if format_type == 'excel':
+            # Create Excel file
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                # Write main data
+                df.to_excel(writer, sheet_name='Attendance Records', index=False)
+                
+                # Create summary sheet
+                summary_data = []
+                for employee in df['employee_name'].unique():
+                    emp_data = df[df['employee_name'] == employee]
+                    total_days = len(emp_data)
+                    total_hours = emp_data['total_hours'].astype(float).sum()
+                    avg_hours = total_hours / total_days if total_days > 0 else 0
+                    late_days = len(emp_data[emp_data['status'] == 'late'])
+                    
+                    summary_data.append({
+                        'Employee': employee,
+                        'Department': emp_data['department'].iloc[0],
+                        'Total Days': total_days,
+                        'Total Hours': round(total_hours, 2),
+                        'Average Hours': round(avg_hours, 2),
+                        'Late Days': late_days,
+                        'Attendance Rate': f"{((total_days - late_days) / total_days * 100):.1f}%" if total_days > 0 else "0%"
+                    })
+                
+                summary_df = pd.DataFrame(summary_data)
+                summary_df.to_excel(writer, sheet_name='Summary', index=False)
+                
+                # Format the Excel file
+                workbook = writer.book
+                worksheet = writer.sheets['Attendance Records']
+                
+                # Add header formatting
+                header_format = workbook.add_format({
+                    'bold': True,
+                    'text_wrap': True,
+                    'valign': 'top',
+                    'fg_color': '#D7E4BC',
+                    'border': 1
+                })
+                
+                for col_num, value in enumerate(df.columns.values):
+                    worksheet.write(0, col_num, value, header_format)
+                
+                # Auto-adjust column widths
+                for i, col in enumerate(df.columns):
+                    max_length = max(df[col].astype(str).str.len().max(), len(col))
+                    worksheet.set_column(i, i, min(max_length + 2, 50))
+            
+            output.seek(0)
+            filename = f"attendance_{start_date}_to_{end_date}.xlsx"
+            
+            return send_file(
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        else:  # CSV format
+            output = BytesIO()
+            df.to_csv(output, index=False, encoding='utf-8')
+            output.seek(0)
+            filename = f"attendance_{start_date}_to_{end_date}.csv"
+            
+            return send_file(
+                output,
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=filename
+            )
+            
+    except Exception as e:
+        print(f"Error exporting attendance: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/attendance/summary', methods=['GET'])
+def get_attendance_summary():
+    """Get attendance summary statistics for a date range"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not start_date or not end_date:
+            return jsonify({'error': 'start_date and end_date are required'}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get summary statistics
+        summary_query = """
+            SELECT 
+                COUNT(DISTINCT ar.person_id) as total_employees,
+                COUNT(ar.id) as total_attendance_records,
+                AVG(ar.total_hours) as avg_daily_hours,
+                SUM(ar.total_hours) as total_hours_worked,
+                SUM(ar.overtime_hours) as total_overtime_hours,
+                COUNT(CASE WHEN ar.status = 'late' THEN 1 END) as late_instances,
+                COUNT(CASE WHEN ar.status = 'early_leave' THEN 1 END) as early_leave_instances
+            FROM attendance_records ar
+            JOIN persons p ON ar.person_id = p.id
+            WHERE ar.date BETWEEN %s AND %s
+            AND p.status = 'active'
+        """
+        
+        cursor.execute(summary_query, [start_date, end_date])
+        summary = cursor.fetchone()
+        
+        # Get employee-wise statistics
+        employee_query = """
+            SELECT 
+                p.employee_id,
+                p.name,
+                p.department,
+                COUNT(ar.id) as days_present,
+                AVG(ar.total_hours) as avg_hours,
+                SUM(ar.total_hours) as total_hours,
+                SUM(ar.overtime_hours) as overtime_hours,
+                COUNT(CASE WHEN ar.status = 'late' THEN 1 END) as late_days
+            FROM persons p
+            LEFT JOIN attendance_records ar ON p.id = ar.person_id 
+                AND ar.date BETWEEN %s AND %s
+            WHERE p.status = 'active'
+            GROUP BY p.id, p.employee_id, p.name, p.department
+            ORDER BY p.name
+        """
+        
+        cursor.execute(employee_query, [start_date, end_date])
+        employees = cursor.fetchall()
+        conn.close()
+        
+        # Format the results
+        for employee in employees:
+            if employee['avg_hours']:
+                employee['avg_hours'] = round(float(employee['avg_hours']), 2)
+            if employee['total_hours']:
+                employee['total_hours'] = round(float(employee['total_hours']), 2)
+            if employee['overtime_hours']:
+                employee['overtime_hours'] = round(float(employee['overtime_hours']), 2)
+        
+        return jsonify({
+            'summary': {
+                'total_employees': summary['total_employees'],
+                'total_attendance_records': summary['total_attendance_records'],
+                'avg_daily_hours': round(float(summary['avg_daily_hours']) if summary['avg_daily_hours'] else 0, 2),
+                'total_hours_worked': round(float(summary['total_hours_worked']) if summary['total_hours_worked'] else 0, 2),
+                'total_overtime_hours': round(float(summary['total_overtime_hours']) if summary['total_overtime_hours'] else 0, 2),
+                'late_instances': summary['late_instances'],
+                'early_leave_instances': summary['early_leave_instances']
+            },
+            'employees': employees,
+            'date_range': {
+                'start_date': start_date,
+                'end_date': end_date
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting attendance summary: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/health', methods=['GET'])

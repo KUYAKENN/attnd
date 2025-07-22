@@ -108,7 +108,7 @@
           <div class="result-content">
             <div *ngIf="currentResult.recognized" class="success-content">
               <p class="person-name">{{ currentResult.person_name }}</p>
-              <p class="confidence">Confidence: {{ (currentResult.similarity! * 100).toFixed(1) }}%</p>
+              <p class="confidence">Confidence: {{ getConfidenceDisplay(currentResult.similarity) }}</p>
               <p class="attendance-id" *ngIf="currentResult.attendance_id">
                 Attendance ID: #{{ currentResult.attendance_id }}
               </p>
