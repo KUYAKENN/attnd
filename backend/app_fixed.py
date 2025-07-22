@@ -177,7 +177,7 @@ def record_attendance(person_id, person_name, confidence_score, face_data, mode=
         
         if mode == 'check_in':
             # Check if already checked in today
-            check_query = "SELECT id, check_in_time FROM attendance_records WHERE person_id = %s AND date = %s AND check_in_time IS NOT NULL AND check_out_time IS NULL"
+            check_query = "SELECT id, check_in_time FROM attendance WHERE person_id = %s AND date_recorded = %s AND check_out_time IS NULL"
             cursor.execute(check_query, (person_id, today))
             existing = cursor.fetchone()
             
@@ -201,12 +201,17 @@ def record_attendance(person_id, person_name, confidence_score, face_data, mode=
                 elif now.time() > datetime.time(8, 30):
                     actual_time = now.replace(hour=8, minute=30, second=0, microsecond=0)
             
+            # Determine status based on time
+            status = 'present'
+            if actual_time.hour > 9:  # Late if after 9 AM
+                status = 'late'
+            
             # Insert new check-in record
             insert_query = """
-                INSERT INTO attendance_records (person_id, check_in_time, date, check_in_method, status)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO attendance (person_id, person_name, check_in_time, date_recorded, confidence_score, detection_method, status, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """
-            values = (person_id, actual_time, today, 'face_recognition', 'present')
+            values = (person_id, person_name, actual_time, today, confidence_score, 'auto', status, 'face_recognition_system')
             cursor.execute(insert_query, values)
             attendance_id = cursor.lastrowid
             
@@ -217,14 +222,15 @@ def record_attendance(person_id, person_name, confidence_score, face_data, mode=
                 'success': True, 
                 'attendance_id': attendance_id,
                 'message': f'Welcome {person_name}! Check-in recorded successfully at {actual_time.strftime("%H:%M:%S")}.',
+                'status': status,
                 'timestamp': actual_time.isoformat()
             }
             
         else:  # check_out
             # Find today's open check-in record
             check_query = """
-                SELECT id, check_in_time FROM attendance_records 
-                WHERE person_id = %s AND date = %s AND check_in_time IS NOT NULL AND check_out_time IS NULL
+                SELECT id, check_in_time FROM attendance 
+                WHERE person_id = %s AND date_recorded = %s AND check_out_time IS NULL
                 ORDER BY check_in_time DESC LIMIT 1
             """
             cursor.execute(check_query, (person_id, today))
@@ -239,28 +245,27 @@ def record_attendance(person_id, person_name, confidence_score, face_data, mode=
                     'message': f'{person_name}, you did not check in today or you have already checked out. Unable to process check-out.'
                 }
             
-            check_in_id, check_in_time = record
+            attendance_id, check_in_time = record
             check_out_time = datetime.datetime.now()
             
             # Calculate total hours
             time_diff = check_out_time - check_in_time
             total_hours = round(time_diff.total_seconds() / 3600, 2)
             
-            # Update the record with check-out time
+            # Update record with check-out
             update_query = """
-                UPDATE attendance_records 
-                SET check_out_time = %s, check_out_method = %s, total_hours = %s
+                UPDATE attendance 
+                SET check_out_time = %s, last_updated = %s
                 WHERE id = %s
             """
-            values = (check_out_time, 'face_recognition', total_hours, check_in_id)
-            cursor.execute(update_query, values)
+            cursor.execute(update_query, (check_out_time, check_out_time, attendance_id))
             
             conn.commit()
             conn.close()
             
             return {
                 'success': True,
-                'attendance_id': check_in_id,
+                'attendance_id': attendance_id,
                 'message': f'Goodbye {person_name}! Check-out recorded successfully at {check_out_time.strftime("%H:%M:%S")}. Total hours worked: {total_hours}.',
                 'total_hours': total_hours,
                 'timestamp': check_out_time.isoformat()
@@ -279,28 +284,27 @@ def log_recognition_attempt(person_id, confidence_score, status, face_data):
         
         cursor = conn.cursor()
         
-        # Map status to success boolean and recognition type
-        success = 1 if status in ['recognized', 'validation_failed'] else 0
-        recognition_type = 'verification'  # Default type
-        error_message = None
-        
-        if status == 'validation_failed':
-            error_message = 'Attendance validation failed'
-        elif status == 'unknown':
-            error_message = 'Face not recognized'
-        
         log_query = """
-            INSERT INTO recognition_logs (person_id, recognition_time, confidence_score, recognition_type, success, error_message)
+            INSERT INTO recognition_logs (person_id, recognition_time, confidence_score, detection_status, processing_time_ms, face_coordinates)
             VALUES (%s, %s, %s, %s, %s, %s)
         """
+        
+        # Calculate face coordinates from bbox
+        bbox = face_data.get('bbox', [0, 0, 0, 0])
+        face_coordinates = json.dumps({
+            'x': int(bbox[0]),
+            'y': int(bbox[1]),
+            'width': int(bbox[2] - bbox[0]),
+            'height': int(bbox[3] - bbox[1])
+        })
         
         log_values = (
             person_id,
             datetime.datetime.now(),
             confidence_score,
-            recognition_type,
-            success,
-            error_message
+            status,
+            50,  # Mock processing time
+            face_coordinates
         )
         
         cursor.execute(log_query, log_values)
@@ -516,7 +520,7 @@ def recognize_face():
                 'similarity': float(similarity),
                 'success': False,
                 'error': attendance_result.get('error'),
-                'message': attendance_result.get('message', 'Attendance validation failed'),
+                'message': attendance_result['message'],
                 'mode': attendance_mode,
                 'timestamp': datetime.datetime.now().isoformat()
             })
@@ -557,25 +561,25 @@ def get_attendance():
         # Join with persons table to get employee details
         query = """
             SELECT 
-                ar.*,
+                a.*,
                 p.name as person_name,
                 p.department,
                 p.position
-            FROM attendance_records ar
-            LEFT JOIN persons p ON ar.person_id = p.id
+            FROM attendance a
+            LEFT JOIN persons p ON a.person_id = p.id
             WHERE 1=1
         """
         params = []
         
         if date_filter:
-            query += " AND ar.date = %s"
+            query += " AND a.date_recorded = %s"
             params.append(date_filter)
         
         if person_id:
-            query += " AND ar.person_id = %s"
+            query += " AND a.person_id = %s"
             params.append(person_id)
         
-        query += " ORDER BY ar.check_in_time DESC"
+        query += " ORDER BY a.check_in_time DESC"
         
         cursor.execute(query, params)
         attendance_records = cursor.fetchall()
@@ -587,12 +591,10 @@ def get_attendance():
                 record['check_in_time'] = record['check_in_time'].isoformat()
             if record.get('check_out_time'):
                 record['check_out_time'] = record['check_out_time'].isoformat()
-            if record.get('date'):
-                record['date'] = record['date'].isoformat()
-            if record.get('created_at'):
-                record['created_at'] = record['created_at'].isoformat()
-            if record.get('updated_at'):
-                record['updated_at'] = record['updated_at'].isoformat()
+            if record.get('date_recorded'):
+                record['date_recorded'] = record['date_recorded'].isoformat()
+            if record.get('last_updated'):
+                record['last_updated'] = record['last_updated'].isoformat()
         
         return jsonify(attendance_records)
         
@@ -612,44 +614,41 @@ def get_present_today():
         # Get today's date
         today = datetime.date.today()
         
-        # Get employees who checked in today and haven't checked out yet
+        # Get employees who checked in today and either haven't checked out or are still present
         query = """
-            SELECT DISTINCT
+            SELECT 
                 p.id,
                 p.name,
                 p.department,
                 p.position,
-                ar.check_in_time,
-                ar.check_out_time,
-                ar.total_hours
+                a.check_in_time,
+                a.check_out_time,
+                a.status,
+                a.confidence_score
             FROM persons p
-            INNER JOIN attendance_records ar ON p.id = ar.person_id
-            WHERE ar.date = %s 
-              AND ar.check_in_time IS NOT NULL
+            INNER JOIN attendance a ON p.id = a.person_id
+            WHERE a.date_recorded = %s 
+              AND a.check_in_time IS NOT NULL
+              AND (a.check_out_time IS NULL OR a.status = 'present')
               AND p.status = 'active'
-            ORDER BY ar.check_in_time ASC
+            ORDER BY a.check_in_time ASC
         """
         
         cursor.execute(query, (today,))
         present_employees = cursor.fetchall()
         conn.close()
         
-        # Convert datetime objects to strings and filter currently present
-        currently_present = []
+        # Convert datetime objects to strings
         for employee in present_employees:
             if employee.get('check_in_time'):
                 employee['check_in_time'] = employee['check_in_time'].isoformat()
             if employee.get('check_out_time'):
                 employee['check_out_time'] = employee['check_out_time'].isoformat()
-            
-            # Only include employees who haven't checked out yet (check_out_time is NULL)
-            if not employee.get('check_out_time'):
-                currently_present.append(employee)
         
         return jsonify({
             'date': today.isoformat(),
-            'present_count': len(currently_present),
-            'employees': currently_present
+            'present_count': len(present_employees),
+            'employees': present_employees
         })
         
     except Exception as e:

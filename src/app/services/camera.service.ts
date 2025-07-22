@@ -12,6 +12,9 @@ export interface FaceRecognitionResult {
   message: string;
   timestamp?: string;
   error?: string;
+  success?: boolean;
+  total_hours?: number;
+  status?: string;
 }
 
 @Injectable({
