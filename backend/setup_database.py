@@ -43,35 +43,37 @@ def create_database():
 def setup_tables():
     """Create all required tables"""
     try:
-        # Connect to the database
-        config = DB_CONFIG.copy()
-        config['database'] = DB_NAME
-        conn = mysql.connector.connect(**config)
+        # Connect to MySQL without database
+        conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         
         # Read and execute SQL file
-        sql_file_path = os.path.join(os.path.dirname(__file__), 'database_setup.sql')
+        sql_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'reset_database.sql')
         
         if os.path.exists(sql_file_path):
             with open(sql_file_path, 'r', encoding='utf-8') as file:
                 sql_commands = file.read()
                 
-            # Split commands and execute them
-            commands = sql_commands.split(';')
-            
-            for command in commands:
-                command = command.strip()
-                if command and not command.startswith('--') and not command.startswith('/*'):
-                    try:
-                        cursor.execute(command)
-                    except mysql.connector.Error as e:
-                        if "already exists" not in str(e).lower():
-                            print(f"Warning: {e}")
-            
-            conn.commit()
-            print("✓ Database tables created successfully")
+            # Execute the entire script using multi=True to handle multiple statements
+            try:
+                results = cursor.execute(sql_commands, multi=True)
+                # Consume all results to avoid "Unread result found" error
+                for result in results:
+                    if result.with_rows:
+                        try:
+                            result.fetchall()
+                        except:
+                            pass
+                conn.commit()
+                print("✓ Database tables created successfully")
+            except mysql.connector.Error as e:
+                if "already exists" not in str(e).lower():
+                    print(f"SQL Error: {e}")
+                    return False
+                else:
+                    print("✓ Database tables created successfully (some already existed)")
         else:
-            print("❌ database_setup.sql file not found")
+            print(f"❌ reset_database.sql file not found at: {sql_file_path}")
             return False
             
         cursor.close()
@@ -97,27 +99,27 @@ def test_connection():
         person_count = cursor.fetchone()['count']
         print(f"✓ Persons table: {person_count} records")
         
-        # Test face_encodings table
-        cursor.execute("SELECT COUNT(*) as count FROM face_encodings")
-        encoding_count = cursor.fetchone()['count']
-        print(f"✓ Face encodings table: {encoding_count} records")
-        
-        # Test attendance table
-        cursor.execute("SELECT COUNT(*) as count FROM attendance")
+        # Test attendance_records table
+        cursor.execute("SELECT COUNT(*) as count FROM attendance_records")
         attendance_count = cursor.fetchone()['count']
-        print(f"✓ Attendance table: {attendance_count} records")
+        print(f"✓ Attendance records table: {attendance_count} records")
         
         # Test recognition_logs table
         cursor.execute("SELECT COUNT(*) as count FROM recognition_logs")
         log_count = cursor.fetchone()['count']
         print(f"✓ Recognition logs table: {log_count} records")
         
+        # Test admin_sessions table
+        cursor.execute("SELECT COUNT(*) as count FROM admin_sessions")
+        admin_count = cursor.fetchone()['count']
+        print(f"✓ Admin sessions table: {admin_count} records")
+        
         # Show sample persons
         print("\n👥 Sample persons:")
-        cursor.execute("SELECT id, name, department, status FROM persons LIMIT 3")
+        cursor.execute("SELECT id, name, department, employee_id FROM persons LIMIT 3")
         persons = cursor.fetchall()
         for person in persons:
-            print(f"  - ID: {person['id']}, Name: {person['name']}, Department: {person['department']}, Status: {person['status']}")
+            print(f"  - ID: {person['id']}, Name: {person['name']}, Department: {person['department']}, Employee ID: {person['employee_id']}")
         
         cursor.close()
         conn.close()
@@ -145,11 +147,7 @@ def main():
         print("3. MySQL connector is installed: pip install mysql-connector-python")
         sys.exit(1)
     
-    # Create database
-    if not create_database():
-        sys.exit(1)
-    
-    # Setup tables
+    # Setup tables (includes database creation)
     if not setup_tables():
         sys.exit(1)
     
