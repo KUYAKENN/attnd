@@ -8,6 +8,10 @@ USE attendance_system;
 -- Set timezone to ensure consistent timestamps
 SET time_zone = '+00:00';
 
+
+
+
+
 -- ============================================
 -- Table: persons
 -- ============================================
