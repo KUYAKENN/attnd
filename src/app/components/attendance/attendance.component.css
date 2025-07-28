@@ -254,6 +254,7 @@ label {
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  margin-top: 2rem;
 }
 
 .table-header {
@@ -262,6 +263,7 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: #f8f9fa;
 }
 
 .date-filter {
@@ -273,6 +275,8 @@ label {
 .date-filter label {
   margin-bottom: 0;
   white-space: nowrap;
+  font-weight: 600;
+  color: #2c3e50;
 }
 
 .date-filter .form-control {
@@ -282,29 +286,47 @@ label {
 
 .table-container {
   overflow-x: auto;
+  background: white;
 }
 
 .attendance-table {
   width: 100%;
   border-collapse: collapse;
+  background: white;
 }
 
 .attendance-table th {
-  background-color: #f8f9fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   padding: 1rem;
   text-align: left;
   font-weight: 600;
-  color: #2c3e50;
-  border-bottom: 1px solid #e1e8ed;
+  border: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .attendance-table td {
   padding: 1rem;
-  border-bottom: 1px solid #f1f3f4;
+  border-bottom: 1px solid #e9ecef;
+  background: white;
+  color: #495057;
 }
 
-.attendance-table tr:hover {
-  background-color: #f8f9fa;
+.attendance-table tbody tr {
+  background: white !important;
+  transition: all 0.2s ease;
+}
+
+.attendance-table tbody tr:nth-child(even) {
+  background: #f8f9fa !important;
+}
+
+.attendance-table tbody tr:hover {
+  background: #e3f2fd !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .name-cell {
@@ -313,63 +335,78 @@ label {
 }
 
 .time-cell {
-  font-family: 'Courier New', monospace;
-  color: #7f8c8d;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #6c757d;
+  font-weight: 500;
 }
 
 .confidence-cell {
   text-align: center;
   font-weight: 600;
+  color: #495057;
 }
 
 .status-badge {
-  padding: 0.25rem 0.75rem;
+  padding: 0.4rem 0.8rem;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  display: inline-block;
 }
 
-.status-present .status-badge {
-  background-color: #d4edda;
-  color: #155724;
+/* Individual status badge colors */
+.status-present {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
 }
 
-.status-late .status-badge {
-  background-color: #fff3cd;
-  color: #856404;
+.status-late {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
 }
 
-.status-early .status-badge {
-  background-color: #cce7ff;
-  color: #004085;
+.status-absent {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
 }
 
-.status-absent .status-badge {
-  background-color: #f8d7da;
-  color: #721c24;
+.status-overtime {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.status-early {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  color: white;
 }
 
 .method-badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
   font-weight: 500;
+  border: 1px solid;
 }
 
-.method-auto {
+.method-face_recognition {
   background-color: #e8f5e8;
   color: #2d5016;
+  border-color: #a3d977;
 }
 
 .method-manual {
   background-color: #fff3cd;
   color: #856404;
+  border-color: #ffeaa7;
 }
 
 .method-override {
   background-color: #f0e7ff;
   color: #5a1a8b;
+  border-color: #d1c4e9;
 }
 
 .no-data {
@@ -377,23 +414,37 @@ label {
   color: #7f8c8d;
   font-style: italic;
   padding: 2rem;
+  background: white !important;
 }
 
-/* Row status styling */
+/* Remove row status background colors - use only badges */
+.attendance-table tr.status-late,
+.attendance-table tr.status-early,
+.attendance-table tr.status-absent,
+.attendance-table tr.status-present,
+.attendance-table tr.status-overtime {
+  background: inherit !important;
+}
+
+/* Optional: Add subtle left border indicators if desired */
 .attendance-table tr.status-late {
-  border-left: 4px solid #f39c12;
+  border-left: 3px solid #f59e0b;
 }
 
 .attendance-table tr.status-early {
-  border-left: 4px solid #3498db;
+  border-left: 3px solid #06b6d4;
 }
 
 .attendance-table tr.status-absent {
-  border-left: 4px solid #e74c3c;
+  border-left: 3px solid #ef4444;
 }
 
 .attendance-table tr.status-present {
-  border-left: 4px solid #27ae60;
+  border-left: 3px solid #10b981;
+}
+
+.attendance-table tr.status-overtime {
+  border-left: 3px solid #8b5cf6;
 }
 
 /* Responsive Design */
@@ -452,4 +503,68 @@ label {
   .stat-number {
     font-size: 1.5rem;
   }
+}
+
+/* Status Badge Styles */
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-present {
+  background-color: #10b981;
+  color: white;
+}
+
+.status-late {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.status-absent {
+  background-color: #ef4444;
+  color: white;
+}
+
+.status-overtime {
+  background-color: #8b5cf6;
+  color: white;
+}
+
+/* Confidence Score Styling */
+.confidence-score {
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* Additional table enhancements */
+.attendance-table td:first-child {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.attendance-table td:last-child {
+  text-align: center;
+}
+
+/* Status column styling */
+.attendance-table td:nth-child(5) {
+  text-align: center;
+}
+
+/* Confidence column styling */
+.attendance-table td:nth-child(6) {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Department column */
+.attendance-table td:nth-child(2) {
+  color: #6b7280;
+  font-weight: 500;
 }

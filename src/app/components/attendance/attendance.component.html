@@ -153,7 +153,7 @@
               </span>
             </td>
             <td class="confidence-cell">
-              {{ (attendance.confidence_score * 100).toFixed(1) }}%
+              {{ formatConfidence(attendance.confidence_score) }}
             </td>
             <td>
               <span class="method-badge" [ngClass]="'method-' + attendance.detection_method">

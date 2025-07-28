@@ -34,7 +34,7 @@ export interface Attendance {
   detection_method: 'auto' | 'manual' | 'override';
   image_path?: string;
   location_id?: number;
-  status: 'present' | 'late' | 'early_leave' | 'absent';
+  status: 'present' | 'late' | 'early_leave' | 'absent' | 'overtime';
   notes?: string;
   created_by?: string;
 }

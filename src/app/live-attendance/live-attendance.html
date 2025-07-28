@@ -26,12 +26,23 @@
           {{ getModeDisplayText() }} 🔒
         </button>
       </div>
+      <div class="status-item" *ngIf="attendanceMode === 'check_in'">
+        <span class="status-label">Time Window:</span>
+        <div class="time-window-container">
+          <span [class]="'time-window-badge ' + (isOnTimeWindow() ? 'on-time' : 'late')">
+            {{ isOnTimeWindow() ? 'On Time' : 'Late' }}
+          </span>
+          <span class="time-window-detail">
+            <i>⏰</i>
+            {{ getTimeWindowMessage() }}
+          </span>
+        </div>
+      </div>
       <div class="status-item" *ngIf="lastRecognitionTime">
         <span class="status-label">Last Scan:</span>
         <span class="time-badge">{{ getTimeSinceLastRecognition() }}</span>
       </div>
     </div>
-  </div>
 
   <!-- Main Content Grid -->
   <div class="content-grid">
@@ -109,6 +120,12 @@
             <div *ngIf="currentResult.recognized" class="success-content">
               <p class="person-name">{{ currentResult.person_name }}</p>
               <p class="confidence">Confidence: {{ getConfidenceDisplay(currentResult.similarity) }}</p>
+              <div class="attendance-status" *ngIf="currentResult.status">
+                <span class="status-label">Status:</span>
+                <span [class]="'status-badge ' + getStatusBadgeClass(currentResult.status)">
+                  {{ getStatusDisplayText(currentResult.status) }}
+                </span>
+              </div>
               <p class="attendance-id" *ngIf="currentResult.attendance_id">
                 Attendance ID: #{{ currentResult.attendance_id }}
               </p>
@@ -158,12 +175,17 @@
         <div class="person-info">
           <span class="person-name">{{ record.person_name }}</span>
           <span class="person-dept">{{ record.department }}</span>
-          <span [class]="'status-badge status-' + record.status">{{ record.status }}</span>
+          <span [class]="'status-badge ' + getStatusBadgeClass(record.status)">
+            {{ getStatusDisplayText(record.status) }}
+          </span>
         </div>
         <div class="time-info">
           <span class="check-in">In: {{ formatTime(record.check_in_time) }}</span>
           <span class="check-out" *ngIf="record.check_out_time">
             Out: {{ formatTime(record.check_out_time) }}
+          </span>
+          <span class="total-hours" *ngIf="record.total_hours">
+            Hours: {{ record.total_hours }}
           </span>
         </div>
       </div>

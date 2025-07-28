@@ -216,11 +216,93 @@ export class LiveAttendanceComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get result status class
+   * Get result status class with time-based styling
    */
   getResultClass(): string {
     if (!this.currentResult) return '';
-    return this.currentResult.recognized ? 'result-success' : 'result-warning';
+    
+    if (this.currentResult.recognized) {
+      // Check if the result includes status information
+      if (this.currentResult.status === 'late') {
+        return 'result-late';
+      } else if (this.currentResult.status === 'overtime') {
+        return 'result-overtime';
+      } else if (this.currentResult.status === 'present') {
+        return 'result-success';
+      } else {
+        return 'result-success'; // Default for recognized faces
+      }
+    } else {
+      return 'result-warning';
+    }
+  }
+
+  /**
+   * Get status badge for attendance records
+   */
+  getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case 'present': return 'badge-success';
+      case 'late': return 'badge-warning';
+      case 'overtime': return 'badge-info';
+      case 'absent': return 'badge-danger';
+      case 'early_leave': return 'badge-info';
+      default: return 'badge-secondary';
+    }
+  }
+
+  /**
+   * Get status display text
+   */
+  getStatusDisplayText(status: string): string {
+    switch (status) {
+      case 'present': return 'On Time';
+      case 'late': return 'Late';
+      case 'overtime': return 'Overtime';
+      case 'absent': return 'Absent';
+      case 'early_leave': return 'Early Leave';
+      case 'partial': return 'Partial Day';
+      default: return status;
+    }
+  }
+
+  /**
+   * Check if current time is within on-time check-in window
+   */
+  isOnTimeWindow(): boolean {
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes(); // Convert to minutes
+    const onTimeStart = 8 * 60; // 8:00 AM in minutes (480)
+    const onTimeEnd = 9 * 60 + 30; // 9:30 AM in minutes (570)
+    
+    return currentTime >= onTimeStart && currentTime <= onTimeEnd;
+  }
+
+  /**
+   * Get time window status message
+   */
+  getTimeWindowMessage(): string {
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const onTimeStart = 8 * 60; // 8:00 AM
+    const onTimeEnd = 9 * 60 + 30; // 9:30 AM
+    
+    if (currentTime < onTimeStart) {
+      const minutesUntilStart = onTimeStart - currentTime;
+      const hours = Math.floor(minutesUntilStart / 60);
+      const minutes = minutesUntilStart % 60;
+      
+      if (hours > 0) {
+        return `Check-in starts in ${hours}h ${minutes}m (8:00 AM)`;
+      } else {
+        return `Check-in starts in ${minutes}m (8:00 AM)`;
+      }
+    } else if (currentTime >= onTimeStart && currentTime <= onTimeEnd) {
+      const minutesRemaining = onTimeEnd - currentTime;
+      return `On-time check-in window: ${minutesRemaining} minutes remaining`;
+    } else {
+      return 'Late check-in period (after 9:30 AM)';
+    }
   }
 
   /**
@@ -324,5 +406,24 @@ export class LiveAttendanceComponent implements OnInit, OnDestroy {
       return 'N/A';
     }
     return `${(similarity * 100).toFixed(1)}%`;
+  }
+
+  /**
+   * Get time-based attendance message
+   */
+  getAttendanceStatusMessage(status: string, timestamp?: string): string {
+    if (!timestamp) return '';
+    
+    const checkInTime = new Date(timestamp);
+    const timeStr = checkInTime.toLocaleTimeString();
+    
+    switch (status) {
+      case 'present':
+        return `✅ On-time check-in at ${timeStr}`;
+      case 'late':
+        return `⚠️ Late check-in at ${timeStr} (after 9:30 AM)`;
+      default:
+        return `Check-in recorded at ${timeStr}`;
+    }
   }
 }

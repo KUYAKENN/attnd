@@ -169,7 +169,7 @@ def find_matching_person(target_embedding, threshold=0.6):
         return None, 0.0
 
 def record_attendance(person_id, person_name, confidence_score, face_data, mode='check_in'):
-    """Record attendance in database with proper validation"""
+    """Record attendance in database with proper validation and time-based status"""
     try:
         conn = get_db_connection()
         if not conn:
@@ -195,13 +195,27 @@ def record_attendance(person_id, person_name, confidence_score, face_data, mode=
             
             # Record actual check-in time
             actual_time = datetime.datetime.now()
+            check_in_time_only = actual_time.time()
             
-            # Insert new check-in record
+            # Determine attendance status based on time
+            # On time: 8:00 AM - 9:30 AM (08:00:00 - 09:30:00)
+            # Late: after 9:30 AM (09:30:01 and beyond)
+            on_time_start = datetime.time(8, 0, 0)   # 8:00 AM
+            on_time_end = datetime.time(9, 30, 0)    # 9:30 AM
+            
+            if on_time_start <= check_in_time_only <= on_time_end:
+                status = 'present'
+                status_message = "on time"
+            else:
+                status = 'late'
+                status_message = "late"
+            
+            # Insert new check-in record with time-based status
             insert_query = """
-                INSERT INTO attendance_records (person_id, check_in_time, date, check_in_method, status)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO attendance_records (person_id, check_in_time, date, check_in_method, status, confidence_score)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """
-            values = (person_id, actual_time, today, 'face_recognition', 'present')
+            values = (person_id, actual_time, today, 'face_recognition', status, confidence_score)
             cursor.execute(insert_query, values)
             attendance_id = cursor.lastrowid
             
@@ -211,8 +225,9 @@ def record_attendance(person_id, person_name, confidence_score, face_data, mode=
             return {
                 'success': True, 
                 'attendance_id': attendance_id,
-                'message': f'Welcome {person_name}! Check-in recorded successfully at {actual_time.strftime("%H:%M:%S")}.',
-                'timestamp': actual_time.isoformat()
+                'message': f'Welcome {person_name}! Check-in recorded successfully at {actual_time.strftime("%H:%M:%S")} ({status_message}).',
+                'timestamp': actual_time.isoformat(),
+                'status': status
             }
             
         else:  # check_out
@@ -241,13 +256,23 @@ def record_attendance(person_id, person_name, confidence_score, face_data, mode=
             time_diff = check_out_time - check_in_time
             total_hours = round(time_diff.total_seconds() / 3600, 2)
             
-            # Update the record with check-out time
+            # Determine checkout status based on total hours worked
+            # Standard work day: 8 hours
+            # Overtime: more than 9 hours
+            if total_hours > 9.0:
+                checkout_status = 'overtime'
+                status_message = f"with overtime ({total_hours} hours)"
+            else:
+                checkout_status = 'present'
+                status_message = f"({total_hours} hours worked)"
+            
+            # Update the record with check-out time and status
             update_query = """
                 UPDATE attendance_records 
-                SET check_out_time = %s, check_out_method = %s, total_hours = %s
+                SET check_out_time = %s, check_out_method = %s, total_hours = %s, status = %s
                 WHERE id = %s
             """
-            values = (check_out_time, 'face_recognition', total_hours, check_in_id)
+            values = (check_out_time, 'face_recognition', total_hours, checkout_status, check_in_id)
             cursor.execute(update_query, values)
             
             conn.commit()
@@ -256,9 +281,10 @@ def record_attendance(person_id, person_name, confidence_score, face_data, mode=
             return {
                 'success': True,
                 'attendance_id': check_in_id,
-                'message': f'Goodbye {person_name}! Check-out recorded successfully at {check_out_time.strftime("%H:%M:%S")}. Total hours worked: {total_hours}.',
+                'message': f'Goodbye {person_name}! Check-out recorded successfully at {check_out_time.strftime("%H:%M:%S")} {status_message}.',
                 'total_hours': total_hours,
-                'timestamp': check_out_time.isoformat()
+                'timestamp': check_out_time.isoformat(),
+                'status': checkout_status
             }
         
     except Exception as e:

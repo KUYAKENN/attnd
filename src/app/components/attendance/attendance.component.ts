@@ -212,10 +212,19 @@ export class AttendanceComponent implements OnInit, OnDestroy {
     return new Date(timeString).toLocaleTimeString();
   }
 
+  formatConfidence(confidence: number): string {
+    if (!confidence || isNaN(confidence)) {
+      return 'N/A';
+    }
+    // Convert to percentage and format
+    return `${(confidence * 100).toFixed(1)}%`;
+  }
+
   getAttendanceStatusClass(status: string): string {
     switch (status) {
       case 'present': return 'status-present';
       case 'late': return 'status-late';
+      case 'overtime': return 'status-overtime';
       case 'early_leave': return 'status-early';
       case 'absent': return 'status-absent';
       default: return '';
