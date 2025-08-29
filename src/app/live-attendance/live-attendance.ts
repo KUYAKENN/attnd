@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/co
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CameraService, FaceRecognitionResult } from '../services/camera.service';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 
 @Component({
   selector: 'app-live-attendance',
@@ -34,6 +34,7 @@ export class LiveAttendanceComponent implements OnInit, OnDestroy {
   lastRecognitionTime: Date | null = null;
   
   private subscriptions: Subscription[] = [];
+  private refreshInterval$!: Subscription;
   private readonly ADMIN_PASSWORD = 'qunabydevs7719';
 
   constructor(private cameraService: CameraService) {}
@@ -66,11 +67,15 @@ export class LiveAttendanceComponent implements OnInit, OnDestroy {
     this.loadTodayAttendance();
     this.loadPresentEmployees();
     this.checkBackendHealth();
+    this.startAutoRefresh();
   }
 
   ngOnDestroy() {
     this.stopCamera();
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.refreshInterval$) {
+      this.refreshInterval$.unsubscribe();
+    }
   }
 
   /**
@@ -112,6 +117,16 @@ export class LiveAttendanceComponent implements OnInit, OnDestroy {
   stopScanning() {
     this.isScanning = false;
     this.cameraService.stopContinuousScanning();
+  }
+
+  /**
+   * Start auto-refreshing attendance data
+   */
+  startAutoRefresh() {
+    this.refreshInterval$ = interval(30000).subscribe(() => { // Refresh every 30 seconds
+      this.loadTodayAttendance();
+      this.loadPresentEmployees();
+    });
   }
 
   /**
@@ -411,7 +426,7 @@ export class LiveAttendanceComponent implements OnInit, OnDestroy {
   /**
    * Get time-based attendance message
    */
-  getAttendanceStatusMessage(status: string, timestamp?: string): string {
+ getAttendanceStatusMessage(status: string, timestamp?: string): string {
     if (!timestamp) return '';
     
     const checkInTime = new Date(timestamp);
@@ -426,4 +441,5 @@ export class LiveAttendanceComponent implements OnInit, OnDestroy {
         return `Check-in recorded at ${timeStr}`;
     }
   }
+
 }
