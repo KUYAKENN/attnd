@@ -9,42 +9,53 @@
 }
 
 h2 {
-  color: #2c3e50;
+  color: var(--cyber-primary);
   margin-bottom: 1rem;
   font-size: 2rem;
   font-weight: 600;
+  font-family: 'Orbitron', monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: var(--cyber-glow);
 }
 
 h3 {
-  color: #34495e;
+  color: var(--cyber-text-secondary);
   margin-bottom: 1rem;
   font-size: 1.3rem;
   font-weight: 500;
+  font-family: 'Rajdhani', monospace;
 }
 
 .message {
   padding: 1rem;
   border-radius: 8px;
+  border: 1px solid;
   margin-bottom: 1rem;
   font-weight: 500;
+  font-family: 'Rajdhani', monospace;
+  backdrop-filter: blur(10px);
 }
 
 .message.success {
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  color: #155724;
+  background-color: rgba(0, 255, 65, 0.1);
+  border-color: var(--cyber-primary);
+  color: var(--cyber-primary);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
 }
 
 .message.error {
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  color: #721c24;
+  background-color: rgba(255, 7, 58, 0.1);
+  border-color: var(--cyber-danger);
+  color: var(--cyber-danger);
+  box-shadow: 0 0 10px rgba(255, 7, 58, 0.2);
 }
 
 .message.info {
-  background-color: #d1ecf1;
-  border: 1px solid #bee5eb;
-  color: #0c5460;
+  background-color: rgba(0, 212, 255, 0.1);
+  border-color: var(--cyber-accent);
+  color: var(--cyber-accent);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
 }
 
 /* Statistics Section */

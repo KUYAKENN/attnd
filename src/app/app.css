@@ -1,4 +1,4 @@
-/* Global App Styles */
+/* Global Cyberpunk App Styles */
 * {
   margin: 0;
   padding: 0;
@@ -6,16 +6,41 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
-              Helvetica, Arial, sans-serif;
-  background-color: #f8f9fa;
-  color: #2c3e50;
+  font-family: 'Rajdhani', monospace;
+  background: linear-gradient(45deg, var(--cyber-bg-darker) 0%, var(--cyber-bg-dark) 50%, #001122 100%);
+  background-attachment: fixed;
+  color: var(--cyber-text-primary);
   line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Cyber Grid Background Animation */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(0, 255, 65, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 25%, rgba(255, 0, 128, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: -1;
+  animation: cyber-bg-pulse 8s ease-in-out infinite;
+}
+
+@keyframes cyber-bg-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
 }
 
 .main-content {
   min-height: calc(100vh - 70px);
-  background-color: #f8f9fa;
+  position: relative;
+  z-index: 1;
 }
 
 /* Utility Classes */
@@ -41,39 +66,95 @@ body {
   margin-top: 1rem;
 }
 
-/* Typography */
+/* Cyber Typography */
 h1, h2, h3, h4, h5, h6 {
-  color: #2c3e50;
+  color: var(--cyber-primary);
+  font-family: 'Orbitron', monospace;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-/* Loading States */
+/* Cyberpunk Loading States */
 .loading {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 200px;
-  color: #7f8c8d;
+  color: var(--cyber-primary);
+  font-family: 'Orbitron', monospace;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
-/* Error States */
+.loading::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--cyber-border);
+  border-top-color: var(--cyber-primary);
+  border-radius: 50%;
+  animation: cyber-spin 1s linear infinite;
+  margin-left: 1rem;
+}
+
+@keyframes cyber-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Cyberpunk Error States */
 .error-message {
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  color: #721c24;
+  background: rgba(255, 7, 58, 0.1);
+  border: 1px solid var(--cyber-danger);
+  color: var(--cyber-danger);
   padding: 1rem;
   border-radius: 8px;
   margin: 1rem 0;
+  font-family: 'Rajdhani', monospace;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 10px rgba(255, 7, 58, 0.2);
 }
 
-/* Success States */
+/* Cyberpunk Success States */
 .success-message {
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  color: #155724;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid var(--cyber-primary);
+  color: var(--cyber-primary);
   padding: 1rem;
   border-radius: 8px;
   margin: 1rem 0;
+  font-family: 'Rajdhani', monospace;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+/* Cyberpunk Scanlines Effect */
+.cyber-scanlines {
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-scanlines::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 65, 0.03) 2px,
+    rgba(0, 255, 65, 0.03) 4px
+  );
+  pointer-events: none;
+  animation: cyber-scanlines 2s linear infinite;
+}
+
+@keyframes cyber-scanlines {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(10px); }
 }
 
 /* Responsive Design */
